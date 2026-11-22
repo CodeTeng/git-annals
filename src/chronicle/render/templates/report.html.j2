@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="{{ meta.lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ meta.repo.name }} · 项目演进编年史</title>
+<style>
+{% include "_style.css.j2" %}
+
+  /* ---------- chapters ---------- */
+  .chapters{display:grid;grid-template-columns:236px 1fr;gap:36px;align-items:start}
+  .chapter-nav{position:sticky;top:24px;display:flex;flex-direction:column;gap:2px}
+  .chapter-nav button{
+    appearance:none;background:none;border:0;border-left:2px solid var(--line);
+    padding:11px 0 11px 14px;text-align:left;cursor:pointer;font:inherit;color:var(--muted);
+    transition:color .15s,border-color .15s
+  }
+  .chapter-nav button:hover{color:var(--ink)}
+  .chapter-nav button[aria-selected="true"]{color:var(--ink);border-left-color:var(--ink)}
+  .chapter-nav .cn-title{display:block;font-size:14px;font-weight:500}
+  .chapter-nav .cn-range{display:block;font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+  .chapter-panel[hidden]{display:none}
+  .chapter-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .chapter-head .tag{
+    font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--warm);
+    border:1px solid rgba(180,85,42,.3);border-radius:4px;padding:2px 7px
+  }
+  .chapter-range{font-family:var(--mono);font-size:12.5px;color:var(--faint);margin-top:6px}
+  .chapter-narr{
+    font-family:var(--serif);font-size:17.5px;line-height:1.8;margin-top:20px;max-width:56ch
+  }
+  .chapter-facts{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+  .cf{font-size:12px;color:var(--faint)}
+  .cf b{display:block;font-size:17px;font-family:var(--mono);color:var(--ink);font-weight:400;margin-top:2px}
+  .chapter-events{margin-top:24px}
+  .ev{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid rgba(230,226,217,.7);font-size:13px}
+  .ev-date{font-family:var(--mono);font-size:11.5px;color:var(--faint);flex:0 0 74px;padding-top:2px}
+  .ev-sub{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev-kind{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--warm);flex:0 0 auto}
+
+  /* ---------- heatmap ---------- */
+  .rhythm-wrap{display:grid;grid-template-columns:1fr;gap:22px}
+  .rhythm-stats{display:flex;gap:34px;flex-wrap:wrap}
+  .rhythm-stats div{font-size:12px;color:var(--faint)}
+  .rhythm-stats b{display:block;font-size:20px;font-family:var(--mono);color:var(--ink);font-weight:400}
+
+  /* ---------- churn ---------- */
+  .crow{display:grid;grid-template-columns:22px 1fr 92px;gap:12px;padding:11px 0;
+    border-bottom:1px solid rgba(230,226,217,.75);align-items:baseline}
+  .crow:last-child{border-bottom:0}
+  .rank{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .cpath{font-family:var(--mono);font-size:12.5px;word-break:break-all}
+  .cpath em{font-style:normal;color:var(--faint)}
+  .cmeta{font-size:11.5px;color:var(--faint);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+  .cbar{height:3px;background:rgba(22,21,26,.07);border-radius:2px;margin-top:7px;overflow:hidden}
+  .cbar span{display:block;height:100%;background:var(--ink);opacity:.55;border-radius:2px}
+  .ctags{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .ctag{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:3px;
+    background:rgba(22,21,26,.05);color:var(--muted);white-space:nowrap}
+  .ctag.brittle{background:rgba(216,90,48,.1);color:#A0431F}
+  .ctag.silo{background:rgba(83,74,183,.1);color:#443C99}
+  .ctag.hot{background:rgba(29,158,117,.12);color:#137054}
+  .score{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .dirs{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+  .dchip{font-size:11.5px;font-family:var(--mono);color:var(--muted);
+    background:rgba(22,21,26,.04);padding:3px 9px;border-radius:4px}
+
+  /* ---------- languages ---------- */
+  .lbar{display:flex;height:9px;border-radius:5px;overflow:hidden;margin:18px 0 16px;background:rgba(22,21,26,.05)}
+  .lbar span{height:100%}
+  .llist{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:12.5px;color:var(--muted)}
+  .llist i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+  .lc0{background:#3F4A56}.lc1{background:#7C6A5A}.lc2{background:#8C8F6B}
+  .lc3{background:#B08A6B}.lc4{background:#6E7F92}.lc5{background:#C2B7A8}
+
+  /* ---------- people ---------- */
+  .prow{display:flex;align-items:center;gap:14px;padding:9px 0}
+  .pname{flex:0 0 160px;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pshare{flex:0 0 54px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .pbar{flex:1;height:4px;background:rgba(22,21,26,.06);border-radius:2px;overflow:hidden}
+  .pbar span{display:block;height:100%;background:var(--ink);opacity:.5}
+
+  /* ---------- facts ---------- */
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .fact{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column}
+  .fact dt{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--warm)}
+  .fact dd{margin:10px 0 0;font-size:13.5px;line-height:1.7;color:var(--ink)}
+  .fact .val{font-family:var(--mono);font-size:12px;color:var(--faint);display:block;margin-top:auto;padding-top:10px}
+
+  @media (max-width:720px){
+    .chapters{grid-template-columns:1fr;gap:24px}
+    .chapter-nav{position:static;flex-direction:row;overflow-x:auto;gap:0;padding-bottom:4px}
+    .chapter-nav button{flex:0 0 auto;border-left:0;border-bottom:2px solid var(--line);padding:8px 12px}
+    .chapter-nav button[aria-selected="true"]{border-left:0;border-bottom-color:var(--ink)}
+    .chapter-nav .cn-range{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">项目演进编年史 · project chronicle</div>
+    <h1>{{ meta.repo.name }}</h1>
+    <p class="quote">{{ quote }}</p>
+    <div class="meta">
+      {% if meta.repo.branch %}<span>{{ meta.repo.branch }}</span><span class="dot"></span>{% endif %}
+      <span class="num">{{ meta.range.first_commit[:10] }}</span>
+      <span class="dot"></span>
+      <span class="num">{{ meta.range.last_commit[:10] }}</span>
+      <span class="dot"></span>
+      <span>{{ overview.span_days }} 天</span>
+    </div>
+
+    <dl class="stats">
+      <div class="stat"><dt>提交</dt><dd>{{ overview.commits | num }}</dd></div>
+      <div class="stat"><dt>新增</dt><dd style="color:#5DCAA5">{{ overview.insertions | signnum('+') }}</dd></div>
+      <div class="stat"><dt>删除</dt><dd style="color:#F0997B">{{ overview.deletions | signnum('−') }}</dd></div>
+      <div class="stat"><dt>贡献者</dt><dd>{{ overview.authors }}</dd></div>
+      <div class="stat"><dt>活跃天数</dt><dd>{{ overview.active_days }}<small>/{{ overview.span_days }}</small></dd></div>
+      <div class="stat"><dt>净增</dt><dd>{{ overview.net | num }}</dd></div>
+    </dl>
+
+    <div class="hero-actions">
+      <button class="btn" id="export-card" type="button">导出分享卡 PNG</button>
+      <span class="btn-note" id="export-note">720 × 1080，适合直接发朋友圈</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="section" id="chapters">
+    <div class="eyebrow">01 / 编年史</div>
+    <h2>这段历史被切成 {{ chapters|length }} 个阶段</h2>
+    <p class="lead">阶段边界由提交频次与代码波动量的突变点决定，不是随手划的。同样的仓库跑两次，边界一样。</p>
+
+    {% if chapters %}
+    <div class="chapters" style="margin-top:28px">
+      <nav class="chapter-nav" role="tablist">
+        {% for ch in chapters %}
+        <button type="button" role="tab" id="tab-{{ ch.id }}"
+                aria-selected="{{ 'true' if loop.first else 'false' }}"
+                aria-controls="panel-{{ ch.id }}" data-target="panel-{{ ch.id }}">
+          <span class="cn-title">{{ ch.title }}</span>
+          <span class="cn-range">{{ ch.start[2:10] }} — {{ ch.end[2:10] }}</span>
+        </button>
+        {% endfor %}
+      </nav>
+
+      <div>
+        {% for ch in chapters %}
+        <article class="chapter-panel" id="panel-{{ ch.id }}" role="tabpanel"
+                 aria-labelledby="tab-{{ ch.id }}" {{ 'hidden' if not loop.first }}>
+          <div class="chapter-head">
+            <h3>{{ ch.title }}</h3>
+            <span class="tag">{{ ch.archetype }}</span>
+          </div>
+          <div class="chapter-range">{{ ch.start }} → {{ ch.end }} · {{ ch.span_days }} 天</div>
+          <p class="chapter-narr">{{ ch.narrative }}</p>
+          <div class="chapter-facts">
+            <div class="cf">提交<b>{{ ch.commits }}</b></div>
+            <div class="cf">新增<b style="color:var(--add)">{{ ch.insertions | signnum('+') }}</b></div>
+            <div class="cf">删除<b style="color:var(--del)">{{ ch.deletions | signnum('−') }}</b></div>
+            <div class="cf">节奏<b>{{ ch.commits_per_week }}/周</b></div>
+            <div class="cf">修复占比<b>{{ ch.fix_share }}%</b></div>
+          </div>
+          {% if ch.top_dirs %}
+          <div class="chapter-events">
+            <div style="font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:6px">主战场</div>
+            <div class="dirs" style="border:0;padding:0;margin:0">
+              {% for d in ch.top_dirs %}<span class="dchip">{{ d }}</span>{% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          {% set evs = events_by_chapter.get(ch.id, []) %}
+          {% if evs %}
+          <div class="chapter-events">
+            <div style="font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px">节点</div>
+            {% for ev in evs %}
+            <div class="ev">
+              <span class="ev-date">{{ ev.date[5:] }}</span>
+              <span class="ev-sub">{{ ev.subject }}</span>
+              <span class="ev-kind">{{ ev.label_text }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="empty" style="margin-top:20px">提交太少，无法切分章节。</p>
+    {% endif %}
+  </section>
+
+  <section class="section" id="timeline">
+    <div class="eyebrow">02 / 节奏</div>
+    <h2>代码量波动</h2>
+    <p class="lead">上面是每一周的增删行，下面是提交频次。两条曲线不重合的地方，往往是「改得多但提交少」的大动作。</p>
+    <div class="block" style="margin-top:22px">
+      <div class="legend">
+        <span><i style="background:var(--add)"></i>新增行</span>
+        <span><i style="background:var(--del)"></i>删除行</span>
+      </div>
+      {{ svg_timeline }}
+      <div style="margin-top:6px">{{ svg_commit_bars }}</div>
+    </div>
+  </section>
+
+  <section class="section" id="rhythm">
+    <div class="eyebrow">03 / 作息</div>
+    <h2>你什么时候写代码</h2>
+    <p class="lead">按提交者本地时区统计，深色格子代表那个小时提交更密集。</p>
+    <div class="block" style="margin-top:22px">
+      <div class="rhythm-wrap">
+        {{ svg_heatmap }}
+        <div class="rhythm-stats">
+          <div>深夜（0–6 点）<b>{{ rhythm.night_ratio }}%</b></div>
+          <div>周末<b>{{ rhythm.weekend_ratio }}%</b></div>
+          <div>最活跃时段<b>{{ rhythm.peak.label }}</b></div>
+          <div>峰值小时<b>{{ rhythm.peak.count }} 次</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="churn">
+    <div class="eyebrow">04 / 风险</div>
+    <h2>文件修罗场</h2>
+    <p class="lead">不只看改得多不多，还看改动里混着多少修复、以及是不是只有一个人敢动它。</p>
+    <div class="block" style="margin-top:22px">
+      {% if churn.files %}
+        {% for f in churn.files %}
+        <div class="crow">
+          <span class="rank">{{ '%02d' % loop.index }}</span>
+          <div>
+            {% set parts = f.path.rsplit('/', 1) %}
+            <div class="cpath">{% if parts|length > 1 %}<em>{{ parts[0] }}/</em>{{ parts[1] }}{% else %}{{ parts[0] }}{% endif %}</div>
+            <div class="cmeta">
+              <span>{{ f.changes }} 次变更</span>
+              <span>{{ f.insertions | signnum('+') }} / {{ f.deletions | signnum('−') }}</span>
+              <span>{{ f.authors }} 人碰过</span>
+              {% if f.fix_ratio > 0 %}<span>修复占比 {{ (f.fix_ratio * 100) | round | int }}%</span>{% endif %}
+            </div>
+            <div class="cbar"><span style="width:{{ (f.score / (churn.top_score or 1) * 100) | round(1) }}%"></span></div>
+          </div>
+          <div><div class="ctags">
+            {% for tag in f.tags %}<span class="ctag {{ tag }}">{{ tag_label[tag] }}</span>{% endfor %}
+          </div></div>
+        </div>
+        {% endfor %}
+        {% if churn.dirs %}
+        <div class="dirs">
+          {% for d in churn.dirs[:6] %}<span class="dchip">{{ d.name }} · {{ d.share }}%</span>{% endfor %}
+        </div>
+        {% endif %}
+      {% else %}
+        <p class="empty">{{ t('churn.empty') }}</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="section" id="langs">
+    <div class="eyebrow">05 / 构成</div>
+    <h2>代码构成</h2>
+    <p class="lead">按增删行数加权，不是文件个数。一个仓库里文档比代码多，本身也是个事实。</p>
+    <div class="block" style="margin-top:22px">
+      {% if languages.rows %}
+      <div class="lbar">
+        {% for item in languages.rows %}<span class="lc{{ loop.index0 % 6 }}" style="width:{{ item.share }}%"></span>{% endfor %}
+      </div>
+      <div class="llist">
+        {% for item in languages.rows %}
+        <span><i class="lc{{ loop.index0 % 6 }}"></i>{{ item.lang }} <span class="num">{{ item.share }}%</span></span>
+        {% endfor %}
+        {% if languages.rest.share > 0 %}
+        <span><i style="background:rgba(22,21,26,.15)"></i>其他 <span class="num">{{ languages.rest.share }}%</span></span>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="empty">没有可统计的文件类型。</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="section" id="people">
+    <div class="eyebrow">06 / 人</div>
+    <h2>谁在写</h2>
+    {% if contributors.empty %}
+      <p class="empty">{{ t('empty.no_commits') }}</p>
+    {% elif contributors.single_author %}
+      <p class="lead">{{ t('empty.single_author') }} 全部 {{ contributors.total_commits }} 次提交来自一个人。</p>
+    {% else %}
+    <p class="lead">作者身份按邮箱合并 —— 同一个人换过机器名也只算一个。</p>
+    <div class="block" style="margin-top:22px">
+      {% for p in contributors.rows %}
+      <div class="prow">
+        <span class="pname" title="{{ p.email }}">{{ p.name }}</span>
+        <span class="pbar"><span style="width:{{ p.share }}%"></span></span>
+        <span class="pshare">{{ p.share }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="section" id="facts">
+    <div class="eyebrow">07 / 彩蛋</div>
+    <h2>考古发现</h2>
+    <p class="lead">全部由规则从提交记录里挖出来，没有一句是编的。</p>
+    <div class="facts" style="margin-top:22px">
+      {% for fact in fun_facts %}
+      <dl class="fact">
+        <dt>{{ fact.title }}</dt>
+        <dd>{{ fact.detail }}<span class="val">{{ fact.value }}</span></dd>
+      </dl>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if warnings %}
+  <div class="notice">
+    {% for w in warnings %}<div>· {{ w }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <footer>
+    <span>git-chronicle {{ meta.version }} · 生成于 {{ meta.generated_at[:19].replace('T', ' ') }}</span>
+    <span>{{ overview.commits_code }} 次代码提交 · {{ overview.files_touched }} 个文件</span>
+  </footer>
+</main>
+
+<div hidden aria-hidden="true">{{ svg_share_card }}</div>
+
+<script>
+(function () {
+  var nav = document.querySelector('.chapter-nav');
+  if (nav) {
+    nav.addEventListener('click', function (event) {
+      var button = event.target.closest('button[role="tab"]');
+      if (!button) return;
+      nav.querySelectorAll('button').forEach(function (item) {
+        item.setAttribute('aria-selected', item === button ? 'true' : 'false');
+      });
+      document.querySelectorAll('.chapter-panel').forEach(function (panel) {
+        panel.hidden = panel.id !== button.dataset.target;
+      });
+    });
+  }
+
+  var btn = document.getElementById('export-card');
+  var note = document.getElementById('export-note');
+  if (!btn) return;
+
+  btn.addEventListener('click', function () {
+    var svg = document.getElementById('share-card');
+    if (!svg) return;
+    note.textContent = '正在生成…';
+
+    var clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    var source = new XMLSerializer().serializeToString(clone);
+
+    // 两条通道：blob 优先，data URL 兜底。某些浏览器在 file:// 下会污染 canvas
+    var candidates = [
+      URL.createObjectURL(new Blob([source], { type: 'image/svg+xml;charset=utf-8' })),
+      'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(source)
+    ];
+
+    function attempt(index) {
+      if (index >= candidates.length) {
+        note.textContent = '当前浏览器不允许导出，请直接截图';
+        return;
+      }
+      var image = new Image();
+      image.onload = function () {
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = 1440;
+          canvas.height = 2160;
+          var ctx = canvas.getContext('2d');
+          ctx.scale(2, 2);
+          ctx.drawImage(image, 0, 0, 720, 1080);
+          canvas.toBlob(function (blob) {
+            if (!blob) { attempt(index + 1); return; }
+            var link = document.createElement('a');
+            link.download = 'chronicle-card.png';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
+            note.textContent = '已保存 chronicle-card.png';
+          }, 'image/png');
+        } catch (err) {
+          attempt(index + 1);
+        }
+      };
+      image.onerror = function () { attempt(index + 1); };
+      image.src = candidates[index];
+    }
+    attempt(0);
+  });
+})();
+</script>
+</body>
+</html>

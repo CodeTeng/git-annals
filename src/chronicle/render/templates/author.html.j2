@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="{{ meta.lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ persona.name }} · 开发者画像</title>
+<style>
+{% include "_style.css.j2" %}
+
+  /* hero 里的标签药丸 */
+  .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  .tag{
+    font-size:12px;padding:4px 12px;border-radius:999px;
+    background:rgba(93,202,165,.14);color:#5DCAA5;letter-spacing:.02em
+  }
+
+  /* 占比条 */
+  .sharebar{display:flex;height:14px;border-radius:7px;overflow:hidden;
+    background:rgba(22,21,26,.07);margin:20px 0 12px}
+  .sharebar .me{background:var(--ink);opacity:.8}
+  .sharebar .rest{background:rgba(22,21,26,.13)}
+  .sharekey{display:flex;justify-content:space-between;font-size:12px;color:var(--faint)}
+
+  /* 作息 */
+  .rhythm-stats{display:flex;gap:34px;flex-wrap:wrap;margin-top:22px}
+  .rhythm-stats div{font-size:12px;color:var(--faint)}
+  .rhythm-stats b{display:block;font-size:20px;font-family:var(--mono);color:var(--ink);font-weight:400}
+
+  /* 阶段参与 */
+  .phase{display:grid;grid-template-columns:1fr 96px;gap:14px;padding:12px 0;
+    border-bottom:1px solid rgba(230,226,217,.75);align-items:center}
+  .phase:last-child{border-bottom:0}
+  .phase-name{font-size:13.5px}
+  .phase-name em{font-style:normal;display:block;font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+  .phase-num{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}
+  .ptrack{height:4px;border-radius:2px;background:rgba(22,21,26,.06);margin-top:7px;overflow:hidden}
+  .ptrack span{display:block;height:100%;background:var(--ink);opacity:.55}
+  .phase-note{margin-top:8px;font-size:13px;line-height:1.7;color:var(--muted);font-family:var(--serif)}
+  .phase.absent .phase-name{color:var(--faint)}
+  .phase.absent .ptrack span{opacity:.12}
+
+  /* 主战场 */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+  .coltitle{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+  .frow{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:6px 0;
+    border-bottom:1px solid rgba(230,226,217,.6)}
+  .frow:last-child{border-bottom:0}
+  .frow code{font-family:var(--mono);font-size:12px;color:var(--muted);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .frow b{font-family:var(--mono);font-weight:400;font-size:12px;color:var(--faint);flex:0 0 auto}
+
+  /* 提交构成 */
+  .kind{display:grid;grid-template-columns:74px 1fr 52px;gap:12px;align-items:center;padding:5px 0}
+  .kind span:first-child{font-size:12.5px;color:var(--muted)}
+  .ktrack{height:6px;border-radius:3px;background:rgba(22,21,26,.06);overflow:hidden}
+  .ktrack i{display:block;height:100%;background:var(--ink);opacity:.45;border-radius:3px}
+  .kind b{font-family:var(--mono);font-size:12px;color:var(--faint);font-weight:400;text-align:right}
+
+  /* 同路人 */
+  .prow{display:flex;align-items:center;gap:14px;padding:9px 0}
+  .pname{flex:0 0 170px;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pshare{flex:0 0 58px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .pbar{flex:1;height:4px;background:rgba(22,21,26,.06);border-radius:2px;overflow:hidden}
+  .pbar span{display:block;height:100%;background:var(--ink);opacity:.5}
+
+  /* 彩蛋 */
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .fact{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;
+    display:flex;flex-direction:column}
+  .fact dt{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--warm)}
+  .fact dd{margin:10px 0 0;font-size:13.5px;line-height:1.7}
+  .fact .val{font-family:var(--mono);font-size:12px;color:var(--faint);display:block;
+    margin-top:auto;padding-top:10px}
+  .fact .comment{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+    font-size:12.5px;color:var(--muted);font-style:italic}
+
+  @media (max-width:720px){
+    .cols{grid-template-columns:1fr;gap:20px}
+    .phase{grid-template-columns:1fr}
+    .phase-num{text-align:left}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">{{ t('author.eyebrow') }}</div>
+    <h1>{{ persona.name }}</h1>
+    <p class="quote">{{ quote }}</p>
+    <div class="tags">
+      {% for tag in persona.tags %}<span class="tag">{{ tag.label }}</span>{% endfor %}
+    </div>
+    <dl class="stats">
+      <div class="stat"><dt>提交</dt><dd>{{ persona.commits | num }}</dd></div>
+      <div class="stat"><dt>占全仓库</dt><dd>{{ persona.share }}<small>%</small></dd></div>
+      <div class="stat"><dt>新增</dt><dd style="color:#5DCAA5">{{ persona.insertions | signnum('+') }}</dd></div>
+      <div class="stat"><dt>删除</dt><dd style="color:#F0997B">{{ persona.deletions | signnum('−') }}</dd></div>
+      <div class="stat"><dt>活跃天数</dt><dd>{{ persona.active_days }}<small>/{{ persona.span_days }}</small></dd></div>
+    </dl>
+    <div class="hero-actions">
+      <button class="btn" id="export-card" type="button">导出分享卡 PNG</button>
+      <span class="btn-note" id="export-note">{{ meta.repo.name }} · 720 × 1080</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="section" id="position">
+    <div class="eyebrow">01 / 坐标</div>
+    <h2>{{ t('author.position') }}</h2>
+    <p class="lead">{{ persona.verdict }}</p>
+    <div class="block" style="margin-top:22px">
+      <div class="sharebar">
+        <span class="me" style="width:{{ persona.share }}%"></span>
+        <span class="rest" style="width:{{ 100 - persona.share }}%"></span>
+      </div>
+      <div class="sharekey">
+        <span>{{ persona.name }} · {{ persona.commits }} 次提交</span>
+        <span>其他人 · {{ persona.repo_commits - persona.commits }} 次</span>
+      </div>
+      <div class="dirs" style="margin-top:24px">
+        <span class="dchip">首次提交 {{ persona.first_commit_at[:10] }}</span>
+        <span class="dchip">最近提交 {{ persona.last_commit_at[:10] }}</span>
+        <span class="dchip">平均 {{ persona.avg_commits_per_active_day }} 次/活跃日</span>
+        <span class="dchip">净增 {{ persona.net | num }} 行</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="rhythm">
+    <div class="eyebrow">02 / 作息</div>
+    <h2>{{ t('author.rhythm') }}</h2>
+    <p class="lead">只看你自己的提交。深色格子代表那个小时提交更密集。</p>
+    <div class="block" style="margin-top:22px">
+      {{ svg_heatmap }}
+      <div class="rhythm-stats">
+        <div>深夜（0–6 点）<b>{{ persona.night_ratio }}%</b></div>
+        <div>周末<b>{{ persona.weekend_ratio }}%</b></div>
+        <div>最常在<b>{{ '%02d' % persona.peak_hour }}:00</b></div>
+        <div>最长连续<b>{{ persona.streak_days }} 天</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="cadence">
+    <div class="eyebrow">03 / 节奏</div>
+    <h2>{{ t('author.cadence') }}</h2>
+    <p class="lead">每根柱子是一周。空的地方就是你不在的时候。</p>
+    <div class="block" style="margin-top:22px">
+      {{ svg_commit_bars }}
+      <div class="caption">
+        最长一次中断 {{ persona.longest_gap_days }} 天。
+        最疯狂的一天是 {{ persona.busiest_day }}，做了 {{ persona.busiest_day_commits }} 次提交。
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="phases">
+    <div class="eyebrow">04 / 阶段</div>
+    <h2>{{ t('author.chapters') }}</h2>
+    <p class="lead">项目被切成这些阶段，每一段你参与了多少。</p>
+    <div class="block" style="margin-top:22px">
+      {% for phase in chapters %}
+      <div class="phase {{ 'absent' if phase.absent }}">
+        <div>
+          <div class="phase-name">{{ phase.title }}<em>{{ phase.start }} → {{ phase.end }}</em></div>
+          <div class="ptrack"><span style="width:{{ phase.share }}%"></span></div>
+          {% if phase.note %}<p class="phase-note">{{ phase.note }}</p>{% endif %}
+        </div>
+        <div class="phase-num">
+          {% if phase.absent %}{{ t('author.absent') }}
+          {% else %}{{ phase.commits }}/{{ phase.chapter_commits }}<br><span style="color:var(--faint)">{{ phase.share }}%</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="section" id="footprint">
+    <div class="eyebrow">05 / 战场</div>
+    <h2>{{ t('author.footprint') }}</h2>
+    <div class="block" style="margin-top:22px">
+      <div class="cols">
+        <div>
+          <div class="coltitle">目录</div>
+          {% for item in persona.top_dirs %}
+          <div class="frow"><code>{{ item.name }}</code><b>{{ item.churn | num }}</b></div>
+          {% endfor %}
+        </div>
+        <div>
+          <div class="coltitle">文件</div>
+          {% for item in persona.top_files %}
+          <div class="frow"><code>{{ item.path }}</code><b>{{ item.churn | num }}</b></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="kinds">
+    <div class="eyebrow">06 / 构成</div>
+    <h2>{{ t('author.kinds') }}</h2>
+    <div class="block" style="margin-top:22px">
+      {% for item in persona.kind_mix %}
+      <div class="kind">
+        <span>{{ kind_label.get(item.kind, item.kind) }}</span>
+        <span class="ktrack"><i style="width:{{ item.share }}%"></i></span>
+        <b>{{ item.share }}%</b>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if peers %}
+  <section class="section" id="peers">
+    <div class="eyebrow">07 / 人</div>
+    <h2>{{ t('author.peers') }}</h2>
+    <p class="lead">{{ t('author.peers.note') }}</p>
+    <div class="block" style="margin-top:22px">
+      {% for peer in peers %}
+      <div class="prow">
+        <span class="pname" title="{{ peer.email }}">{{ peer.name }}</span>
+        <span class="pbar"><span style="width:{{ peer.overlap }}%"></span></span>
+        <span class="pshare">{{ peer.shared_files }} 个共同文件</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="section" id="facts">
+    <div class="eyebrow">08 / 彩蛋</div>
+    <h2>{{ t('author.facts') }}</h2>
+    <div class="facts" style="margin-top:22px">
+      {% for fact in fun_facts %}
+      <dl class="fact">
+        <dt>{{ fact.title }}</dt>
+        <dd>{{ fact.detail }}<span class="val">{{ fact.value }}</span>
+          {% if fact.comment %}<div class="comment">{{ fact.comment }}</div>{% endif %}
+        </dd>
+      </dl>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if warnings %}
+  <div class="notice">
+    {% for w in warnings %}<div>· {{ w }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <footer>
+    <span>git-chronicle {{ meta.version }} · 生成于 {{ meta.generated_at[:19].replace('T', ' ') }}</span>
+    <span>{{ meta.repo.name }} · {{ meta.repo.branch or '' }}</span>
+  </footer>
+</main>
+
+<div hidden aria-hidden="true">{{ svg_share_card }}</div>
+
+<script>
+(function () {
+  var btn = document.getElementById('export-card');
+  var note = document.getElementById('export-note');
+  if (!btn) return;
+
+  btn.addEventListener('click', function () {
+    var svg = document.getElementById('share-card');
+    if (!svg) return;
+    note.textContent = '正在生成…';
+
+    var clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    var source = new XMLSerializer().serializeToString(clone);
+
+    // 两条通道：blob 优先，data URL 兜底。某些浏览器在 file:// 下会污染 canvas
+    var candidates = [
+      URL.createObjectURL(new Blob([source], { type: 'image/svg+xml;charset=utf-8' })),
+      'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(source)
+    ];
+
+    function attempt(index) {
+      if (index >= candidates.length) {
+        note.textContent = '当前浏览器不允许导出，请直接截图';
+        return;
+      }
+      var image = new Image();
+      image.onload = function () {
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = 1440;
+          canvas.height = 2160;
+          var ctx = canvas.getContext('2d');
+          ctx.scale(2, 2);
+          ctx.drawImage(image, 0, 0, 720, 1080);
+          canvas.toBlob(function (blob) {
+            if (!blob) { attempt(index + 1); return; }
+            var link = document.createElement('a');
+            link.download = 'developer-card.png';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
+            note.textContent = '已保存 developer-card.png';
+          }, 'image/png');
+        } catch (err) {
+          attempt(index + 1);
+        }
+      };
+      image.onerror = function () { attempt(index + 1); };
+      image.src = candidates[index];
+    }
+    attempt(0);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+.workbuddy/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 生成的报告与中间态，不进版本库
+out/
+chronicle-report.html
+author-report.html
+*.local.toml
+
+.DS_Store
+Thumbs.db
