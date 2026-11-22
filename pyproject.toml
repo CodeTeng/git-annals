@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -8,7 +8,34 @@ version = "0.1.0"
 description = "Git 仓库时光机：把一段提交历史变成一份能看的演进报告"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "teng", email = "teng2002823@outlook.com" }]
+keywords = [
+    "git",
+    "cli",
+    "report",
+    "visualization",
+    "developer-tools",
+    "llm",
+    "changelog",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Natural Language :: Chinese (Simplified)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Software Development :: Version Control :: Git",
+    "Typing :: Typed",
+]
 dependencies = [
     "typer>=0.12",
     "rich>=13",
@@ -22,8 +49,23 @@ dev = ["pytest>=8"]
 [project.scripts]
 chronicle = "chronicle.cli:app"
 
+[project.urls]
+Homepage = "https://github.com/CodeTeng/git-chronicle"
+Repository = "https://github.com/CodeTeng/git-chronicle"
+Issues = "https://github.com/CodeTeng/git-chronicle/issues"
+Changelog = "https://github.com/CodeTeng/git-chronicle/releases"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/chronicle"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/chronicle",
+    "tests",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

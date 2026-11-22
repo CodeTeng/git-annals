@@ -2,6 +2,8 @@
 
 把一段 Git 提交历史，变成一份能看的演进报告。
 
+![项目编年史](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-project.png)
+
 一条命令，输出一个单文件 HTML。两个视角：
 
 - **项目编年史**：这个仓库经历了什么 —— 阶段切分、代码量起伏、文件修罗场、考古彩蛋
@@ -25,7 +27,16 @@ Git Chronicle 把元数据按时间、结构、人三个维度重新组织，切
 ## 安装
 
 ```bash
-pip install -e .
+pipx install git-chronicle     # 推荐：命令行工具装在独立环境
+# 或者
+pip install git-chronicle
+```
+
+开发时从源码装：
+
+```bash
+git clone https://github.com/CodeTeng/git-chronicle
+cd git-chronicle && pip install -e ".[dev]"
 ```
 
 只用 Python 3.10+ 和本机 `git`，不装数据库、不起服务。
@@ -68,6 +79,16 @@ chronicle . --anon --json chronicle.json
 | `--follow-renames` | 开启重命名追踪，更准但更慢 |
 | `--ignore PATTERN` | 额外忽略路径，可重复 |
 | `--model` / `--base-url` / `--api-key` | 覆盖 LLM 配置 |
+
+## 报告里有什么
+
+**项目编年史** —— 阶段切分与叙事、代码量波动、作息热力图、文件修罗场、语言构成、贡献者分布、考古彩蛋，外加一张 720×1080 的分享卡。
+
+![代码量波动与作息热力图](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-charts.png)
+
+**开发者画像** —— 同一个人在这个仓库里的坐标、作息指纹、提交构成、阶段参与度、同路人。标签全部由规则判定，每条都能用报告里的数字反查。
+
+![开发者画像](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-author.png)
 
 ## 配置文件
 
@@ -119,6 +140,8 @@ Ambition = ["me@corp.com", "me@gmail.com"]
 
 只脱敏邮箱是不够的 —— commit 信息本身就在说你在做什么。这条在真实仓库上验证过：脱敏前 `chimera`、`intent_agent`、`CollaRAG` 会从标题里漏出来，还有 Windows 用户名会从绝对路径里漏出来。
 
+> 脱敏去掉的是**标识**，不是**语义**。anon 报告里仍然写着「6 月做了一次大规模重构、删了 16,702 行、主战场在 docs」。这些东西拼起来，熟人还是猜得出是哪个项目。所以 `--anon` 的准确定位是「可以发给不认识你的人」，不是「可以发给任何人」。
+
 `tests/test_redaction.py` 是这份承诺的执行机制：把真实姓名、邮箱、域名、仓库名、目录名、文件名、标题关键词、分支名全列出来，在渲染后的产物里逐个搜，**命中即失败**。这条测试做过变异验证 —— 故意破坏散文替换，4 项立刻转红。
 
 ## 几个刻意的设计取舍
@@ -141,6 +164,10 @@ Ambition = ["me@corp.com", "me@gmail.com"]
 python -m venv .venv
 .venv/Scripts/pip install -e ".[dev]"
 pytest
+
+# 造一个虚构仓库看效果（README 里的截图就是它）
+python scripts/make_demo.py out/demo/beacon
+chronicle out/demo/beacon --open
 ```
 
 ```
@@ -168,7 +195,8 @@ src/chronicle/
 - 确定性统计层：概览、时序、作息热力、修罗场、语言、贡献者、里程碑、彩蛋
 - LLM 叙事（结构化输出 + 校验 + 单次自修正 + 无痛回落）
 - 身份多邮箱合并、脱敏、时间范围、分支与重命名开关
-- 32 项测试，含真仓库端到端、本地 mock LLM 服务、以及做过变异验证的脱敏反查
+- 32 项测试，CI 覆盖 Ubuntu/Windows × Python 3.10/3.13，另有一条「按用户方式装 wheel 再跑」的冒烟作业
+- 发布于 PyPI，`pipx install git-chronicle`
 
 规划中：
 

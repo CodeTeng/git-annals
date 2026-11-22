@@ -1,0 +1,62 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: 安装
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      # 测试会真的 git init 并提交，先给一个全局身份兜底
+      - name: 配置 git
+        run: |
+          git config --global user.name "ci"
+          git config --global user.email "ci@example.com"
+
+      - name: 测试
+        run: pytest -q
+
+  smoke:
+    name: 安装产物冒烟
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 光跑源码不算数：这里按用户的方式装一遍，再跑一次真仓库
+      - name: 构建并安装 wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+          pip install dist/*.whl && cd /tmp
+
+      - name: 用装好的命令跑一遍
+        run: |
+          python "$GITHUB_WORKSPACE/scripts/make_demo.py" /tmp/demo
+          cd /tmp
+          chronicle demo --no-ai --output project.html
+          chronicle demo --view author --no-ai --output author.html
+          test -s project.html && test -s author.html
+          grep -q "share-card" project.html
+          grep -q "DEVELOPER PROFILE" author.html

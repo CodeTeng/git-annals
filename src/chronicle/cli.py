@@ -213,7 +213,10 @@ def _print_project_summary(report: dict) -> None:
     grid.add_column(justify="right", style="dim")
     grid.add_column()
     grid.add_row("提交", f"{overview['commits']:,}")
-    grid.add_row("新增 / 删除", f"+{overview['insertions']:,} / -{overview['deletions']:,}")
+    grid.add_row(
+        "新增 / 删除",
+        f"{_signed(overview['insertions'], '+')} / {_signed(overview['deletions'], '-')}",
+    )
     grid.add_row("贡献者", f"{overview['authors']}")
     grid.add_row("活跃天数", f"{overview['active_days']} / {overview['span_days']}")
     console.print(Panel(grid, title=title, border_style="dim", padding=(0, 2)))
@@ -232,7 +235,7 @@ def _print_project_summary(report: dict) -> None:
                 chapter["title"],
                 f"{chapter['start']} → {chapter['end']}",
                 str(chapter["commits"]),
-                f"+{chapter['insertions']:,}/-{chapter['deletions']:,}",
+                f"{_signed(chapter['insertions'], '+')}/{_signed(chapter['deletions'], '-')}",
             )
         console.print()
         console.print(table)
@@ -254,7 +257,10 @@ def _print_author_summary(report: dict) -> None:
     grid.add_column(justify="right", style="dim")
     grid.add_column()
     grid.add_row("提交", f"{persona['commits']:,}（占全仓库 {persona['share']}%）")
-    grid.add_row("新增 / 删除", f"+{persona['insertions']:,} / -{persona['deletions']:,}")
+    grid.add_row(
+        "新增 / 删除",
+        f"{_signed(persona['insertions'], '+')} / {_signed(persona['deletions'], '-')}",
+    )
     grid.add_row("活跃天数", f"{persona['active_days']} / {persona['span_days']}")
     grid.add_row("标签", "、".join(tag["label"] for tag in persona["tags"]) or "—")
     console.print(Panel(grid, title=title, border_style="dim", padding=(0, 2)))
@@ -280,6 +286,11 @@ def _print_author_summary(report: dict) -> None:
     if report.get("quote"):
         console.print()
         console.print(f"  [italic dim]{report['quote']}[/italic dim]")
+
+
+def _signed(value: int, sign: str) -> str:
+    """零不带符号：「-0」看起来像 bug。"""
+    return f"{sign}{value:,}" if value else "0"
 
 
 def _print_facts(report: dict) -> None:
