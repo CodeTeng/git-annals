@@ -2,6 +2,14 @@
 
 > 发布名从 `git-chronicle` 改为 **`gitannals`**：PyPI 上的 `git-chronicle` 已被另一个同类项目占用（其命令也叫 `chronicle`），为避免安装与命令冲突整体改名。仓库与 PyPI 项目现在同名：`CodeTeng/git-annals` / `gitannals`。
 
+## 0.1.1 — 2026-11-23
+
+- 新增 `ANNALS_API_KEY` 环境变量；查找顺序 `ANNALS_API_KEY` > `CHRONICLE_API_KEY` > `DEEPSEEK_API_KEY` > `OPENAI_API_KEY`，旧名继续可用
+- 没配 Key 时的提示改为「未配 LLM，功能完整」，不再读起来像报错
+- README 中英双版补「要不要配」一节：三种配法、`.annals.toml` 写法、CI 不需要任何 Key
+- 版本号收敛到 `chronicle.__init__` 一处，`pyproject.toml` 改为动态读取
+- 测试 38 → 43：环境变量优先级、旧名兼容、CLI 覆盖、无 Key 时报告依然完整
+
 ## 0.1.0 — 2026-11-22
 
 首个可用版本。

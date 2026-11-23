@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gitannals"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Git 仓库时光机：把一段提交历史变成一份能看的演进报告"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -55,6 +55,9 @@ Homepage = "https://github.com/CodeTeng/git-annals"
 Repository = "https://github.com/CodeTeng/git-annals"
 Issues = "https://github.com/CodeTeng/git-annals/issues"
 Changelog = "https://github.com/CodeTeng/git-annals/releases"
+
+[tool.hatch.version]
+path = "src/chronicle/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chronicle"]
