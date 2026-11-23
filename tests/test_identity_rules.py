@@ -101,12 +101,13 @@ def test_project_warns_about_split_identity(tmp_path: Path) -> None:
     assert "--author" in joined, "提示里要给出可直接复制的合并命令"
 
 
-def test_author_warns_when_partial(tmp_path: Path) -> None:
+def test_email_query_merges_detected_identities(tmp_path: Path) -> None:
+    """指定一个邮箱时，同一人的其他邮箱也一并算上 —— 画像描述的是「人」，不是邮箱。"""
     repo = _repo_with_two_emails(tmp_path / "split")
     report = analyze(Options(repo=str(repo), view="author", author="me@corp.com"))
 
-    assert report["persona"]["commits"] == 7
-    assert any("me@personal.dev" in w for w in report["warnings"])
+    assert report["persona"]["commits"] == 12
+    assert any("已自动合并" in w for w in report["warnings"])
 
 
 def test_author_merged_is_complete(tmp_path: Path) -> None:
@@ -232,3 +233,113 @@ def test_noreply_matches_real_email(tmp_path: Path) -> None:
         and "76752051+mo8it@users.noreply.github.com" in c["emails"]
         for c in collisions
     ), f"没识别出 noreply 分裂：{collisions}"
+
+
+def test_bare_name_merges_same_display_name(tmp_path: Path) -> None:
+    """`--author "Solo Dev"` 命中两个邮箱，但显示名相同 —— 直接合并。
+
+    这是「漏合并」最常见的场景：用户不知道要写两个邮箱。
+    """
+    repo = _repo_with_two_emails(tmp_path / "auto")
+    report = analyze(Options(repo=str(repo), view="author", author="Solo Dev"))
+
+    assert report["persona"]["commits"] == 12, "同名多邮箱应当自动合并"
+    assert any("已自动合并" in w for w in report["warnings"])
+
+
+def test_different_names_are_not_merged(tmp_path: Path) -> None:
+    """名字不同的两个人不该被合并，哪怕都提交过。"""
+    root = tmp_path / "two"
+    root.mkdir(parents=True, exist_ok=True)
+    git(root, "init", "-q", "-b", "main")
+    for day in range(1, 9):
+        (root / "a.py").write_text(f"x = {day}\n", encoding="utf-8")
+        git(root, "add", "-A")
+        who = "Alice Chen <alice@x.com>" if day <= 4 else "Bob Li <bob@x.com>"
+        git(root, "commit", "-q", "-m", f"feat: {day}", "--author", who,
+            when=f"2026-03-{day:02d}T09:00:00+08:00")
+
+    report = analyze(Options(repo=str(root), view="author", author="alice@x.com"))
+    assert report["persona"]["commits"] == 4
+
+
+def test_root_dir_is_labelled(tmp_path: Path) -> None:
+    """根目录文件不该显示成 `(root)`。"""
+    repo = make_repo(tmp_path / "rootlabel")
+    report = analyze(Options(repo=str(repo)))
+    names = [d["name"] for d in report["churn"]["dirs"]]
+    assert "(root)" not in names
+    assert any(name in ("根目录", "root") for name in names), names
+
+    english = analyze(Options(repo=str(repo), lang="en"))
+    assert "(root)" in [d["name"] for d in english["churn"]["dirs"]]
+
+
+def test_active_tag_renders_as_dot(tmp_path: Path) -> None:
+    """「仍在动」只用一个圆点表示，不占标签位 —— 否则 15 行里 14 行都在重复。"""
+    from chronicle.render import build_html
+    from helpers import make_repo as build
+
+    repo = build(tmp_path / "dot")
+    report = analyze(Options(repo=str(repo)))
+    html = build_html(report)
+
+    tags_rendered = [t for t in ("active",) if f'class="ctag {t}"' in html]
+    assert not tags_rendered, "active 不该作为标签出现"
+    if any("active" in f["tags"] for f in report["churn"]["files"]):
+        assert "cdot" in html
+
+
+def test_bare_name_merges_same_display_name(tmp_path: Path) -> None:
+    """`--author "Solo Dev"` 命中两个邮箱，但显示名相同 —— 直接合并。
+
+    这是「漏合并」最常见的场景：用户不知道要写两个邮箱。
+    """
+    repo = _repo_with_two_emails(tmp_path / "auto")
+    report = analyze(Options(repo=str(repo), view="author", author="Solo Dev"))
+
+    assert report["persona"]["commits"] == 12, "同名多邮箱应当自动合并"
+    assert any("已自动合并" in w for w in report["warnings"])
+
+
+def test_different_names_are_not_merged(tmp_path: Path) -> None:
+    """名字不同的两个人不该被合并，哪怕都提交过。"""
+    root = tmp_path / "two"
+    root.mkdir(parents=True, exist_ok=True)
+    git(root, "init", "-q", "-b", "main")
+    for day in range(1, 9):
+        (root / "a.py").write_text(f"x = {day}\n", encoding="utf-8")
+        git(root, "add", "-A")
+        who = "Alice Chen <alice@x.com>" if day <= 4 else "Bob Li <bob@x.com>"
+        git(root, "commit", "-q", "-m", f"feat: {day}", "--author", who,
+            when=f"2026-03-{day:02d}T09:00:00+08:00")
+
+    report = analyze(Options(repo=str(root), view="author", author="alice@x.com"))
+    assert report["persona"]["commits"] == 4
+
+
+def test_root_dir_is_labelled(tmp_path: Path) -> None:
+    """根目录文件不该显示成 `(root)`。"""
+    repo = make_repo(tmp_path / "rootlabel")
+    report = analyze(Options(repo=str(repo)))
+    names = [d["name"] for d in report["churn"]["dirs"]]
+    assert "(root)" not in names
+    assert any(name in ("根目录", "root") for name in names), names
+
+    english = analyze(Options(repo=str(repo), lang="en"))
+    assert "(root)" in [d["name"] for d in english["churn"]["dirs"]]
+
+
+def test_active_tag_renders_as_dot(tmp_path: Path) -> None:
+    """「仍在动」只用一个圆点表示，不占标签位 —— 否则 15 行里 14 行都在重复。"""
+    from chronicle.render import build_html
+    from helpers import make_repo as build
+
+    repo = build(tmp_path / "dot")
+    report = analyze(Options(repo=str(repo)))
+    html = build_html(report)
+
+    tags_rendered = [t for t in ("active",) if f'class="ctag {t}"' in html]
+    assert not tags_rendered, "active 不该作为标签出现"
+    if any("active" in f["tags"] for f in report["churn"]["files"]):
+        assert "cdot" in html

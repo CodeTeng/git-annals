@@ -97,6 +97,43 @@ gitannals . --anon --json annals.json
 
 ![开发者画像](https://raw.githubusercontent.com/CodeTeng/git-annals/main/docs/screenshot-author.png)
 
+## 同一个人有多个邮箱
+
+Git 用邮箱区分身份。一个人换过邮箱，报告就会把他算成两个人 —— **画像只统计到一半，
+而数字看起来完全正常**。
+
+在 httpie 上实测：Jakub Roztocil 有 `jakub@roztocil.co` 和 `jakub@roztocil.name`，
+显示名一模一样。不合并的话，画像说他"占全仓库 37.7%"，实际是 69.3%。
+
+三种形态会被自动识别：
+
+| 形态 | 例子 |
+|---|---|
+| 同名不同邮箱 | `jakub@roztocil.co` / `jakub@roztocil.name` |
+| 重音写法差异 | `Jakub Roztočil` / `Jakub Roztocil` |
+| GitHub 网页提交 | `12345+user@users.noreply.github.com` 与 `user@example.com` |
+
+检测到之后，报告会在警告区给出可直接复制的命令：
+
+```bash
+gitannals . --view author --author "a@x.com,b@y.com"
+```
+
+写进 `.annals.toml` 可以一次配好，不用每次带参数：
+
+```toml
+[author.aliases]
+Jakub = ["jakub@roztocil.co", "jakub@roztocil.name"]
+```
+
+**为什么项目视角只报告、不合并**：两个同名同姓的真人确实可能出现在同一个仓库里，
+误合并比漏合并更难发现。
+
+但**个人视角会自动合并**：`--author` 指向的是「一个人」，不是「一个邮箱」。
+只要命中的身份被检测为同一人（同名、或 GitHub noreply 与真邮箱对应），就一并统计，
+并在警告里说明合并了什么。实测 `--author liv` 会把 7 个邮箱合起来（676 次提交），
+`--author mo8it` 会带上他的 GitHub 网页提交（897 → 1007 次）。
+
 ## 配置文件
 
 仓库根放一个 `.annals.toml`，团队可以固定口径：
@@ -233,7 +270,7 @@ src/chronicle/
 - 确定性统计层：概览、时序、作息热力、修罗场、语言、贡献者、里程碑、彩蛋
 - LLM 叙事（结构化输出 + 校验 + 单次自修正 + 无痛回落）
 - 身份多邮箱合并、脱敏、中英双语报告、时间范围、分支与重命名开关
-- 112 项测试（含按仓库形态生成的不变式测试），CI 覆盖 Ubuntu/Windows × Python 3.10/3.13，另有一条「按用户方式装 wheel 再跑」的冒烟作业
+- 116 项测试（含按仓库形态生成的不变式测试），CI 覆盖 Ubuntu/Windows × Python 3.10/3.13，另有一条「按用户方式装 wheel 再跑」的冒烟作业
 - 发布于 PyPI，`pipx install gitannals`
 
 规划中：

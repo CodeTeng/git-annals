@@ -45,7 +45,7 @@
   .rhythm-stats b{display:block;font-size:20px;font-family:var(--mono);color:var(--ink);font-weight:400}
 
   /* ---------- churn ---------- */
-  .crow{display:grid;grid-template-columns:22px 1fr 92px;gap:12px;padding:11px 0;
+  .crow{display:grid;grid-template-columns:22px minmax(0,1fr) minmax(92px,168px);gap:12px;padding:11px 0;
     border-bottom:1px solid rgba(230,226,217,.75);align-items:baseline}
   .crow:last-child{border-bottom:0}
   .rank{font-family:var(--mono);font-size:11px;color:var(--faint)}
@@ -54,12 +54,13 @@
   .cmeta{font-size:11.5px;color:var(--faint);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
   .cbar{height:3px;background:rgba(22,21,26,.07);border-radius:2px;margin-top:7px;overflow:hidden}
   .cbar span{display:block;height:100%;background:var(--ink);opacity:.55;border-radius:2px}
-  .ctags{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .ctags{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;row-gap:3px}
   .ctag{font-size:10px;letter-spacing:.04em;padding:1px 6px;border-radius:3px;
     background:rgba(22,21,26,.05);color:var(--muted);white-space:nowrap}
   .ctag.brittle{background:rgba(216,90,48,.1);color:#A0431F}
   .ctag.silo{background:rgba(83,74,183,.1);color:#443C99}
-  .ctag.active{background:rgba(29,158,117,.12);color:#137054}
+  .cdot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#1D9E75;
+    margin-right:6px;vertical-align:middle;opacity:.85}
   .score{font-family:var(--mono);font-size:12px;color:var(--faint)}
   .dirs{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
   .dchip{font-size:11.5px;font-family:var(--mono);color:var(--muted);
@@ -237,7 +238,7 @@
           <span class="rank">{{ '%02d' % loop.index }}</span>
           <div>
             {% set parts = f.path.rsplit('/', 1) %}
-            <div class="cpath">{% if parts|length > 1 %}<em>{{ parts[0] }}/</em>{{ parts[1] }}{% else %}{{ parts[0] }}{% endif %}</div>
+            <div class="cpath">{% if 'active' in f.tags %}<span class="cdot" title="{{ t('ui.churn.active_dot') }}"></span>{% endif %}{% if parts|length > 1 %}<em>{{ parts[0] }}/</em>{{ parts[1] }}{% else %}{{ parts[0] }}{% endif %}</div>
             <div class="cmeta">
               <span>{{ t('ui.churn.changes', n=f.changes) }}</span>
               <span>{{ f.insertions | signnum('+') }} / {{ f.deletions | signnum('−') }}</span>
@@ -247,7 +248,7 @@
             <div class="cbar"><span style="width:{{ (f.score / (churn.top_score or 1) * 100) | round(1) }}%"></span></div>
           </div>
           <div><div class="ctags">
-            {% for tag in f.tags %}<span class="ctag {{ tag }}">{{ tag_label[tag] }}</span>{% endfor %}
+            {% for tag in f.tags if tag != 'active' %}<span class="ctag {{ tag }}">{{ tag_label[tag] }}</span>{% endfor %}
           </div></div>
         </div>
         {% endfor %}

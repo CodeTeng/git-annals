@@ -97,6 +97,45 @@ gitannals . --anon --json annals.json
 
 ![Developer profile](https://raw.githubusercontent.com/CodeTeng/git-annals/main/docs/screenshot-author.png)
 
+## One person, several emails
+
+Git identifies people by email. Someone who changed their address gets counted twice —
+**the profile only sees half of them, and the numbers still look perfectly normal**.
+
+Measured on httpie: Jakub Roztocil committed as both `jakub@roztocil.co` and
+`jakub@roztocil.name`, with identical display names. Unmerged, the profile said
+"37.7% of the repo" when the real figure is 69.3%.
+
+Three patterns are detected automatically:
+
+| Pattern | Example |
+|---|---|
+| Same name, different emails | `jakub@roztocil.co` / `jakub@roztocil.name` |
+| Accent variants | `Jakub Roztočil` / `Jakub Roztocil` |
+| GitHub web commits | `12345+user@users.noreply.github.com` vs `user@example.com` |
+
+The report prints a ready-to-paste command in its warnings section:
+
+```bash
+gitannals . --view author --author "a@x.com,b@y.com"
+```
+
+Or pin it in `.annals.toml`:
+
+```toml
+[author.aliases]
+Jakub = ["jakub@roztocil.co", "jakub@roztocil.name"]
+```
+
+**Why the project view only reports**: two different people can share a name in the same
+repository, and a wrong merge is harder to notice than a missing one.
+
+The **profile view does merge**: `--author` points at a person, not at a mailbox. If the
+identities it resolves to are detected as one person (same display name, or a GitHub noreply
+matching a real address), they are counted together and the warning says what was merged.
+Measured: `--author liv` merges 7 emails (676 commits); `--author mo8it` picks up his web
+commits too (897 → 1007).
+
 ## Config file
 
 Drop a `.annals.toml` at the repo root so a team shares the same settings:
@@ -232,7 +271,7 @@ Done:
 - Deterministic statistics: overview, timeline, rhythm, hotspots, languages, contributors, milestones, facts
 - LLM narration with structured output, validation, one self-repair attempt, and painless fallback
 - Multi-email identity merging, redaction, bilingual reports, date ranges, branch and rename switches
-- 112 tests (including shape-based invariant tests); CI covers Ubuntu/Windows × Python 3.10/3.13, plus a job that installs the built wheel and runs it like a user would
+- 116 tests (including shape-based invariant tests); CI covers Ubuntu/Windows × Python 3.10/3.13, plus a job that installs the built wheel and runs it like a user would
 
 Planned:
 

@@ -505,7 +505,7 @@ def _build_chapter(
 
     churn_per_commit = total_lines / len(members) if members else 0.0
 
-    dirs = _top_dirs(members, limit=3)
+    dirs = _top_dirs(members, limit=3, lang=lang)
     archetype = _classify(
         order=order,
         per_week=per_week,
@@ -667,7 +667,7 @@ def _single_chapter(commits: list[Commit], points: list[dict], lang: str, granul
         "fix_share": pct(sum(1 for c in commits if c.kind == "fix"), len(commits)),
         "delete_ratio": pct(deletions, insertions + deletions),
         "gap_before_days": 0,
-        "top_dirs": _top_dirs(commits, limit=3),
+        "top_dirs": _top_dirs(commits, limit=3, lang=lang),
         "granularity": granularity,
         "summary": t(
             "chapter.summary",
@@ -713,12 +713,13 @@ def _merge_tiny(chapters: list[dict]) -> list[dict]:
     return merged
 
 
-def _top_dirs(commits: list[Commit], limit: int) -> list[str]:
+def _top_dirs(commits: list[Commit], limit: int, lang: str = "zh") -> list[str]:
     counter: Counter[str] = Counter()
+    root_label = t("ui.dir.root", lang)
     for commit in commits:
         for change in commit.changes:
             parts = change.path.split("/")
-            name = parts[0] if len(parts) > 1 else "(root)"
+            name = parts[0] if len(parts) > 1 else root_label
             counter[name] += change.churn
     return [name for name, _ in counter.most_common(limit)]
 

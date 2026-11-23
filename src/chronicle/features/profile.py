@@ -13,9 +13,9 @@ from collections import Counter, defaultdict
 from collections.abc import Callable
 from datetime import date
 
-from ..clean import file_category
+from ..clean import file_category, normalize_author_key
 from ..i18n import t
-from ..identity import KeyResolver, build_resolver
+from ..identity import KeyResolver, build_resolver, find_name_collisions, name_signature
 from ..models import Commit
 from ._util import pct, round2
 
@@ -73,10 +73,11 @@ def resolve_author(
     *,
     aliases: dict[str, list[str]] | None = None,
     lang: str = "zh",
-) -> tuple[str, str, str, list[Commit]]:
-    """按邮箱 / 姓名 / 邮箱前缀找人，返回 (key, 显示名, 邮箱, 该人的提交)。
+) -> tuple[str, str, str, list[Commit], int]:
+    """按邮箱 / 姓名 / 邮箱前缀找人。
 
-    query 用逗号分隔多个身份时，视为同一个人的多个邮箱，直接合并。
+    返回 (key, 显示名, 邮箱, 该人的提交, 自动合并的身份数)。
+    最后一项 >0 表示输入的名字命中了多个同名身份，已合并。
     """
     parts = [part.strip() for part in (query or "").split(",") if part.strip()]
     merged = dict(aliases or {})
@@ -91,32 +92,89 @@ def resolve_author(
     needle = (parts[0] if parts else "").lower()
     if not needle:
         raise AuthorLookupError(t("ui.err.need_author", lang))
+    auto_merged = 0
 
     key: str | None = None
     if needle in table:
         key = needle
     else:
-        by_name = [k for k, e in table.items() if any(needle in n.lower() for n in e["names"])]
-        by_email = [k for k in table if needle in k]
-        matches = sorted(set(by_name) | set(by_email))
-        if len(matches) == 1:
-            key = matches[0]
-        elif len(matches) > 1:
+        # 分三层，先精确后模糊。
+        # 原来直接做子串匹配，`--author liv` 会命中 olivia 和 live.com 邮箱，
+        # 报出 9 个候选 —— 用户真正想找的 liv 只有几个。
+        exact = [
+            k
+            for k, entry in table.items()
+            if k.split("@")[0] == needle
+            or name_signature(needle)
+            in {name_signature(n) for n in entry["names"]}
+        ]
+        # 优先取「显示名签名与输入完全相同」的身份。
+        # `liv` 会命中 8 个，其中 7 个真叫 liv，另 1 个是 olivia（早年用过 liv 这个名）。
+        # 只用同名判断会把她也算进来。
+        sig = name_signature(needle)
+        same_sig = [
+            k
+            for k in exact
+            if name_signature(table[k]["names"].most_common(1)[0][0]) == sig
+        ]
+        pool = same_sig or exact
+        if len(pool) == 1:
+            key = pool[0]
+        elif len(pool) > 1 and len(
+            {name_signature(table[k]["names"].most_common(1)[0][0]) for k in pool}
+        ) == 1:
+            # 用户输入的名字精确命中多个身份，但它们显示名完全相同 ——
+            # 几乎可以确定是同一个人的多个邮箱（liv 有 7 个）。直接合并，
+            # 否则用户要在 8 个一模一样的候选里猜哪个才是他要的。
+            auto_aliases = dict(merged)
+            auto_aliases["__auto__"] = pool
+            resolver = build_resolver(auto_aliases)
+            table = _index(commits, resolver)
+            key = resolver.canonical(pool[0])
+            auto_merged = len(pool)
+        elif len(pool) > 1:
             raise AuthorLookupError(
-                t("ui.err.ambiguous", lang, q=query, n=len(matches)),
-                [_label(table[k]) for k in matches],
+                t("ui.err.ambiguous", lang, q=query, n=len(pool)),
+                [_label(table[k]) for k in pool],
             )
         else:
-            raise AuthorLookupError(
-                t("ui.err.not_found", lang, q=query),
-                [_label(table[k]) for k in table],
-            )
+            by_name = [k for k, e in table.items() if any(needle in n.lower() for n in e["names"])]
+            by_email = [k for k in table if needle in k]
+            matches = sorted(set(by_name) | set(by_email))
+            if len(matches) == 1:
+                key = matches[0]
+            elif len(matches) > 1:
+                raise AuthorLookupError(
+                    t("ui.err.ambiguous", lang, q=query, n=len(matches)),
+                    [_label(table[k]) for k in matches],
+                )
+            else:
+                raise AuthorLookupError(
+                    t("ui.err.not_found", lang, q=query),
+                    [_label(table[k]) for k in table],
+                )
+
+    # 同一个人换了邮箱（含 GitHub noreply），只看输入的名字永远拼不全。
+    # 身份检测已经做过严格判断，这里直接沿用它的结论。
+    for collision in find_name_collisions(commits):
+        if key not in collision["emails"]:
+            continue
+        group = collision["emails"]
+        if len(group) < 2:
+            break
+        auto_aliases = dict(merged)
+        auto_aliases["__detected__"] = group
+        resolver = build_resolver(auto_aliases)
+        table = _index(commits, resolver)
+        key = resolver.canonical(group[0])
+        auto_merged = max(auto_merged, len(group))
+        break
 
     entry = table[key]
     name = entry["names"].most_common(1)[0][0]
     email = entry["emails"].most_common(1)[0][0]
     subset = [c for c in commits if resolver.key(c) == key]
-    return key, name, email, subset
+    return key, name, email, subset, auto_merged
 
 
 def _label(entry: dict) -> str:
@@ -167,7 +225,7 @@ def build_persona(
     gaps = [(b - a).days for a, b in zip(days, days[1:])]
     longest_gap = max(gaps) if gaps else 0
 
-    footprint = _footprint(subset)
+    footprint = _footprint(subset, lang=lang)
     avg_churn = (insertions + deletions) / max(1, len(subset))
 
     persona = {
@@ -214,13 +272,14 @@ def build_persona(
     return persona
 
 
-def _footprint(commits: list[Commit], *, limit: int = 5) -> dict:
+def _footprint(commits: list[Commit], *, limit: int = 5, lang: str = "zh") -> dict:
     dirs: Counter[str] = Counter()
     files: Counter[str] = Counter()
+    root_label = t("ui.dir.root", lang)
     for commit in commits:
         for change in commit.changes:
             parts = change.path.split("/")
-            dirs[parts[0] if len(parts) > 1 else "(root)"] += change.churn
+            dirs[parts[0] if len(parts) > 1 else root_label] += change.churn
             files[change.path] += change.churn
     return {
         "dirs": [{"name": name, "churn": value} for name, value in dirs.most_common(limit)],

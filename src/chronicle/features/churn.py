@@ -18,6 +18,7 @@ from collections import defaultdict
 from datetime import timedelta
 
 from ..clean import file_category, normalize_author_key
+from ..i18n import t
 from ..models import Commit
 from ._baseline import over, quantile, ratio, share
 from ._util import log_norm, pct, round2
@@ -39,7 +40,13 @@ _FLOOR_SINGLE = 300
 _CATEGORY_WEIGHT = {"code": 1.0, "config": 0.65, "doc": 0.55, "other": 0.8}
 
 
-def build(commits: list[Commit], *, top_files: int = 15, top_dirs: int = 8) -> dict:
+def build(
+    commits: list[Commit],
+    *,
+    top_files: int = 15,
+    top_dirs: int = 8,
+    lang: str = "zh",
+) -> dict:
     if not commits:
         return {"files": [], "dirs": [], "baseline": {}, "empty": True}
 
@@ -155,7 +162,7 @@ def build(commits: list[Commit], *, top_files: int = 15, top_dirs: int = 8) -> d
 
     return {
         "files": top,
-        "dirs": _aggregate_dirs(rows, top_dirs),
+        "dirs": _aggregate_dirs(rows, top_dirs, lang),
         "baseline": {
             "brittle_cut": round2(cut_brittle * 100),
             "volatile_cut": round2(cut_volatile * 100),
@@ -168,14 +175,15 @@ def build(commits: list[Commit], *, top_files: int = 15, top_dirs: int = 8) -> d
     }
 
 
-def _aggregate_dirs(rows: list[dict], limit: int) -> list[dict]:
+def _aggregate_dirs(rows: list[dict], limit: int, lang: str = "zh") -> list[dict]:
     """按顶层模块聚合。报告里给「哪个模块最乱」，比列 15 个文件名更有洞察。"""
+    root_label = t("ui.dir.root", lang)
     dirs: dict[str, dict] = defaultdict(
         lambda: {"changes": 0, "churn": 0, "files": 0, "fix_touches": 0, "score": 0.0}
     )
     for row in rows:
         parts = row["path"].split("/")
-        name = parts[0] if len(parts) > 1 else "(root)"
+        name = parts[0] if len(parts) > 1 else root_label
         entry = dirs[name]
         entry["changes"] += row["changes"]
         entry["churn"] += row["churn"]

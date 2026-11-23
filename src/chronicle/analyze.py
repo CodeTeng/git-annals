@@ -150,7 +150,9 @@ def _project_report(
     report["rhythm"] = temporal.build_rhythm(commits, lang=options.lang)
 
     emit("churn", "计算文件修罗场评分")
-    report["churn"] = churn.build(commits, top_files=options.top_files)
+    report["churn"] = churn.build(
+        commits, top_files=options.top_files, lang=options.lang
+    )
     report["languages"] = languages.build(commits)
     report["contributors"] = contributors.build(commits)
 
@@ -196,7 +198,7 @@ def _author_report(
         report["warnings"].append(t("ui.warn.default_author", options.lang, who=query))
     query, aliases = profile.resolve_aliases(query, options.author_aliases)
     try:
-        key, name, email, subset = profile.resolve_author(
+        key, name, email, subset, auto_merged = profile.resolve_author(
             commits, query, aliases=aliases, lang=options.lang
         )
     except profile.AuthorLookupError as exc:
@@ -206,6 +208,15 @@ def _author_report(
     report["meta"]["author"] = {"key": key, "name": name, "email": email}
 
     emit("persona", f"统计 {name} 的画像")
+    if auto_merged:
+        key_name = t(
+            "ui.warn.auto_merged_anon" if options.anon else "ui.warn.auto_merged",
+            options.lang,
+            name=name,
+            n=auto_merged,
+        )
+        report["warnings"].append(key_name)
+
     report["persona"] = profile.build_persona(
         subset,
         commits,
@@ -250,7 +261,8 @@ def _author_report(
         report["warnings"].append(t("ui.warn.short_span", options.lang))
     if len(subset) < 10:
         report["warnings"].append(t("ui.warn.few_personal", options.lang))
-    if report["persona"]["share"] < 30 and authors_total > 1:
+    # 已经自动合并过身份，就别再说「去合并」—— 自相矛盾
+    if report["persona"]["share"] < 30 and authors_total > 1 and not auto_merged:
         report["warnings"].append(
             t("ui.warn.low_share", options.lang, share=report["persona"]["share"])
         )

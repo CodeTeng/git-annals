@@ -40,6 +40,7 @@ GENERIC_SEGMENTS = frozenset(
         "eval", "bench", "benchmark", "experiments", "notebooks", "paper", "papers",
         "data", "dataset", "datasets", "output", "outputs", "results",
         "main", "root", "tmp", "temp", "var", "etc", "opt", "usr", "home",
+        "根目录",
     }
 )
 
