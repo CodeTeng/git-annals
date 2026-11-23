@@ -115,9 +115,17 @@ def _parse_header(line: str) -> dict[str, object]:
 
 
 def _parse_dt(value: str) -> datetime:
-    """%aI / %cI 带本地时区偏移，fromisoformat 可直接吃。"""
+    """%aI / %cI 带时区偏移，fromisoformat 一般能直接吃。
+
+    例外：时区是 UTC 时 git 输出 `2026-11-23T13:34:11Z`，而 Python 3.10 的
+    `fromisoformat` 不认 `Z`（3.11 才支持）。CI runner 和大多数服务器都在 UTC，
+    这条路径不是边角 —— 3.10 环境下会直接崩在解析第一条提交上。
+    """
+    text = value.strip()
+    if text[-1:] in ("Z", "z"):
+        text = text[:-1] + "+00:00"
     try:
-        return datetime.fromisoformat(value)
+        return datetime.fromisoformat(text)
     except ValueError as exc:
         raise GitError(f"无法解析提交时间：{value!r}") from exc
 

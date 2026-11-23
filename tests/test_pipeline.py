@@ -285,3 +285,61 @@ def test_binary_only_repo_does_not_claim_first_line(tmp_path: Path) -> None:
     origin = next(f for f in report["fun_facts"] if f["id"] == "origin")
     assert "第一行" not in origin["detail"]
     assert "没有文本改动" in origin["detail"]
+
+
+def test_parse_zulu_timestamp() -> None:
+    """git 在 UTC 时区输出 Z 结尾，Python 3.10 的 fromisoformat 不认。
+
+    CI runner 与大多数服务器都在 UTC —— 这不是边角情况，是默认路径。
+    """
+    from chronicle.gitio.parse import _parse_dt
+
+    parsed = _parse_dt("2026-11-23T13:34:11Z")
+    assert parsed.tzinfo is not None
+    assert parsed.utcoffset().total_seconds() == 0
+    assert parsed.year == 2026 and parsed.hour == 13
+
+    # 常规偏移仍然正常
+    assert _parse_dt("2026-11-23T21:34:11+08:00").utcoffset().total_seconds() == 8 * 3600
+
+
+def test_repo_committed_in_utc(tmp_path: Path) -> None:
+    """整条链路：以 UTC 提交的仓库也能分析（CI 上就是这个时区）。"""
+    root = tmp_path / "utc"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+    (root / "a.py").write_text("x = 1\n", encoding="utf-8")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "feat: utc", when="2026-05-01T12:00:00+00:00")
+
+    report = analyze(Options(repo=str(root)))
+    assert report["overview"]["commits"] == 1
+
+
+def test_parse_zulu_timestamp() -> None:
+    """git 在 UTC 时区输出 Z 结尾，Python 3.10 的 fromisoformat 不认。
+
+    CI runner 与大多数服务器都在 UTC —— 这不是边角情况，是默认路径。
+    """
+    from chronicle.gitio.parse import _parse_dt
+
+    parsed = _parse_dt("2026-11-23T13:34:11Z")
+    assert parsed.tzinfo is not None
+    assert parsed.utcoffset().total_seconds() == 0
+    assert parsed.year == 2026 and parsed.hour == 13
+
+    # 常规偏移仍然正常
+    assert _parse_dt("2026-11-23T21:34:11+08:00").utcoffset().total_seconds() == 8 * 3600
+
+
+def test_repo_committed_in_utc(tmp_path: Path) -> None:
+    """整条链路：以 UTC 提交的仓库也能分析（CI 上就是这个时区）。"""
+    root = tmp_path / "utc"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+    (root / "a.py").write_text("x = 1\n", encoding="utf-8")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "feat: utc", when="2026-05-01T12:00:00+00:00")
+
+    report = analyze(Options(repo=str(root)))
+    assert report["overview"]["commits"] == 1
