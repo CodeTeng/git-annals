@@ -5,7 +5,7 @@
 
 用法：
     python scripts/make_demo.py out/demo/beacon
-    chronicle out/demo/beacon --output out/demo/project.html
+    gitannals out/demo/beacon --output out/demo/project.html
 """
 
 from __future__ import annotations

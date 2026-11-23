@@ -297,11 +297,11 @@
           canvas.toBlob(function (blob) {
             if (!blob) { attempt(index + 1); return; }
             var link = document.createElement('a');
-            link.download = 'developer-card.png';
+            link.download = 'annals-author-card.png';
             link.href = URL.createObjectURL(blob);
             link.click();
             setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
-            note.textContent = '{{ t('ui.export.done', name='developer-card.png') }}';
+            note.textContent = '{{ t('ui.export.done', name='annals-author-card.png') }}';
           }, 'image/png');
         } catch (err) {
           attempt(index + 1);

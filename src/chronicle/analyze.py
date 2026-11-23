@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import __version__
+from . import TOOL_NAME, __version__
 from .clean import DEFAULT_IGNORE, filter_noise
 from .config import LlmSettings, Settings
 from .features import (
@@ -281,7 +281,7 @@ def _build_meta(
 ) -> dict[str, Any]:
     ordered = sorted(commits, key=lambda c: c.authored_at) if commits else []
     return {
-        "tool": "git-chronicle",
+        "tool": TOOL_NAME,
         "version": __version__,
         "schema_version": SCHEMA_VERSION,
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),

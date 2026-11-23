@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "git-chronicle"
+name = "gitannals"
 version = "0.1.0"
 description = "Git 仓库时光机：把一段提交历史变成一份能看的演进报告"
 readme = "README.md"
@@ -13,6 +13,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "teng", email = "teng2002823@outlook.com" }]
 keywords = [
     "git",
+    "annals",
     "cli",
     "report",
     "visualization",
@@ -47,7 +48,7 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [project.scripts]
-chronicle = "chronicle.cli:app"
+gitannals = "chronicle.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/CodeTeng/git-chronicle"

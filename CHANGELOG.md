@@ -1,5 +1,7 @@
 # Changelog
 
+> 发布名从 `git-chronicle` 改为 **`gitannals`**：PyPI 上的 `git-chronicle` 已被另一个同类项目占用（其命令也叫 `chronicle`），为避免安装与命令冲突整体改名。仓库地址仍是 `CodeTeng/git-chronicle`。
+
 ## 0.1.0 — 2026-11-22
 
 首个可用版本。

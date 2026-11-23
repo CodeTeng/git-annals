@@ -1,8 +1,8 @@
-# Git Chronicle
+# Git Annals
 
 [![test](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml/badge.svg)](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml)
-[![PyPI](https://img.shields.io/pypi/v/git-chronicle?color=1D9E75)](https://pypi.org/project/git-chronicle/)
-[![Python](https://img.shields.io/pypi/pyversions/git-chronicle)](https://pypi.org/project/git-chronicle/)
+[![PyPI](https://img.shields.io/pypi/v/gitannals?color=1D9E75)](https://pypi.org/project/gitannals/)
+[![Python](https://img.shields.io/pypi/pyversions/gitannals)](https://pypi.org/project/gitannals/)
 [![License](https://img.shields.io/badge/license-MIT-16151A)](LICENSE)
 
 Turn a Git history into a report you'd actually read.
@@ -17,8 +17,8 @@ One command, one self-contained HTML file. Two views:
 - **Developer profile** — what one person looks like inside it: working-hour fingerprint, commit mix, per-phase involvement, teammates
 
 ```
-chronicle /path/to/repo --open
-chronicle /path/to/repo --view author --open
+gitannals /path/to/repo --open
+gitannals /path/to/repo --view author --open
 ```
 
 ---
@@ -34,9 +34,9 @@ Git Chronicle reorganises the metadata along three axes — time, structure, peo
 ## Install
 
 ```bash
-pipx install git-chronicle     # recommended for a CLI
+pipx install gitannals     # recommended for a CLI
 # or
-pip install git-chronicle
+pip install gitannals
 ```
 
 From source:
@@ -52,22 +52,22 @@ Python 3.10+ and your local `git`. No database, no server.
 
 ```bash
 # Project chronicle (current directory)
-chronicle .
+gitannals .
 
 # Developer profile
-chronicle . --view author --author me@corp.com
+gitannals . --view author --author me@corp.com
 
 # One person, two emails — merge them
-chronicle . --view author --author "me@corp.com,me@gmail.com"
+gitannals . --view author --author "me@corp.com,me@gmail.com"
 
 # Roast tone, limited to a date range
-chronicle . --since 2025-06-01 --tone roast
+gitannals . --since 2025-06-01 --tone roast
 
 # Fully offline
-chronicle . --no-ai
+gitannals . --no-ai
 
 # Redacted, safe to share
-chronicle . --anon --json chronicle.json
+gitannals . --anon --json annals.json
 ```
 
 | Flag | Meaning |
@@ -99,7 +99,7 @@ chronicle . --anon --json chronicle.json
 
 ## Config file
 
-Drop a `.chronicle.toml` at the repo root so a team shares the same settings:
+Drop a `.annals.toml` at the repo root so a team shares the same settings:
 
 ```toml
 [report]
@@ -116,7 +116,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 Ambition = ["me@corp.com", "me@gmail.com"]
 ```
 
-Precedence: built-in defaults < `.chronicle.toml` < environment variables < CLI flags.
+Precedence: built-in defaults < `.annals.toml` < environment variables < CLI flags.
 
 ## LLM narration
 
@@ -174,7 +174,7 @@ pytest
 
 # Build a fictional repo to look at (this is what the screenshots show)
 python scripts/make_demo.py out/demo/beacon
-chronicle out/demo/beacon --open
+gitannals out/demo/beacon --open
 ```
 
 ```

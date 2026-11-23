@@ -14,6 +14,7 @@ from __future__ import annotations
 import html
 import math
 
+from .. import TOOL_NAME
 from ..i18n import t, weekdays
 
 __all__ = [
@@ -371,7 +372,7 @@ def svg_share_card(report: dict, *, width: int = 720, height: int = 1080) -> str
     )
     parts.append(
         f'<text x="{pad}" y="{height - 60}" font-size="12" fill="#6B6660">'
-        f'git-chronicle · {_e(meta.get("version", "0.1.0"))}</text>'
+        f'{_e(TOOL_NAME)} · {_e(meta.get("version", "0.1.0"))}</text>'
     )
     zh = card_lang == "zh"
     tail = (
@@ -501,7 +502,7 @@ def svg_share_card_author(report: dict, *, width: int = 720, height: int = 1080)
     repo_name = (meta.get("repo") or {}).get("name") or ""
     parts.append(
         f'<text x="{pad}" y="{height - 60}" font-size="12" fill="#6B6660">'
-        f"{_e(repo_name)} · git-chronicle {_e(meta.get('version', '0.1.0'))}</text>"
+        f"{_e(repo_name)} · {_e(TOOL_NAME)} {_e(meta.get('version', '0.1.0'))}</text>"
     )
     zh = card_lang == "zh"
     tail = (

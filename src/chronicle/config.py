@@ -13,7 +13,7 @@ from typing import Any
 
 __all__ = ["Settings", "LlmSettings", "load_settings", "CONFIG_FILENAME"]
 
-CONFIG_FILENAME = ".chronicle.toml"
+CONFIG_FILENAME = ".annals.toml"
 
 DEFAULT_BASE_URL = "https://api.deepseek.com/v1"
 DEFAULT_MODEL = "deepseek-chat"

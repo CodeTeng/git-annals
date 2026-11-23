@@ -32,12 +32,12 @@ app = typer.Typer(
 
 console = Console()
 
-_DEFAULT_OUTPUT = {"project": "chronicle-report.html", "author": "author-report.html"}
+_DEFAULT_OUTPUT = {"project": "annals-report.html", "author": "annals-author.html"}
 
 
 def _version_callback(value: bool) -> None:
     if value:
-        console.print(f"git-chronicle {__version__}")
+        console.print(f"gitannals {__version__}")
         raise typer.Exit()
 
 

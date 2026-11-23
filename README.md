@@ -1,8 +1,8 @@
-# Git Chronicle
+# Git Annals
 
 [![test](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml/badge.svg)](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml)
-[![PyPI](https://img.shields.io/pypi/v/git-chronicle?color=1D9E75)](https://pypi.org/project/git-chronicle/)
-[![Python](https://img.shields.io/pypi/pyversions/git-chronicle)](https://pypi.org/project/git-chronicle/)
+[![PyPI](https://img.shields.io/pypi/v/gitannals?color=1D9E75)](https://pypi.org/project/gitannals/)
+[![Python](https://img.shields.io/pypi/pyversions/gitannals)](https://pypi.org/project/gitannals/)
 [![License](https://img.shields.io/badge/license-MIT-16151A)](LICENSE)
 
 把一段 Git 提交历史，变成一份能看的演进报告。
@@ -17,8 +17,8 @@
 - **开发者画像**：这个人在这个仓库里是什么样 —— 作息指纹、提交构成、阶段参与度、同路人
 
 ```
-chronicle /path/to/repo --open
-chronicle /path/to/repo --view author --open
+gitannals /path/to/repo --open
+gitannals /path/to/repo --view author --open
 ```
 
 ---
@@ -34,9 +34,9 @@ Git Chronicle 把元数据按时间、结构、人三个维度重新组织，切
 ## 安装
 
 ```bash
-pipx install git-chronicle     # 推荐：命令行工具装在独立环境
+pipx install gitannals     # 推荐：命令行工具装在独立环境
 # 或者
-pip install git-chronicle
+pip install gitannals
 ```
 
 开发时从源码装：
@@ -52,22 +52,22 @@ cd git-chronicle && pip install -e ".[dev]"
 
 ```bash
 # 项目编年史（当前目录）
-chronicle .
+gitannals .
 
 # 个人画像
-chronicle . --view author --author me@corp.com
+gitannals . --view author --author me@corp.com
 
 # 同一个人有两个邮箱，合并算
-chronicle . --view author --author "me@corp.com,me@gmail.com"
+gitannals . --view author --author "me@corp.com,me@gmail.com"
 
 # 毒舌风格 + 指定区间
-chronicle . --since 2025-06-01 --tone roast
+gitannals . --since 2025-06-01 --tone roast
 
 # 完全不联网
-chronicle . --no-ai
+gitannals . --no-ai
 
 # 脱敏后分享
-chronicle . --anon --json chronicle.json
+gitannals . --anon --json annals.json
 ```
 
 | 参数 | 说明 |
@@ -99,7 +99,7 @@ chronicle . --anon --json chronicle.json
 
 ## 配置文件
 
-仓库根放一个 `.chronicle.toml`，团队可以固定口径：
+仓库根放一个 `.annals.toml`，团队可以固定口径：
 
 ```toml
 [report]
@@ -116,7 +116,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 Ambition = ["me@corp.com", "me@gmail.com"]
 ```
 
-优先级：内置默认 < `.chronicle.toml` < 环境变量 < 命令行参数。
+优先级：内置默认 < `.annals.toml` < 环境变量 < 命令行参数。
 
 ## LLM 叙事
 
@@ -174,7 +174,7 @@ pytest
 
 # 造一个虚构仓库看效果（README 里的截图就是它）
 python scripts/make_demo.py out/demo/beacon
-chronicle out/demo/beacon --open
+gitannals out/demo/beacon --open
 ```
 
 ```
@@ -203,7 +203,7 @@ src/chronicle/
 - LLM 叙事（结构化输出 + 校验 + 单次自修正 + 无痛回落）
 - 身份多邮箱合并、脱敏、中英双语报告、时间范围、分支与重命名开关
 - 38 项测试，CI 覆盖 Ubuntu/Windows × Python 3.10/3.13，另有一条「按用户方式装 wheel 再跑」的冒烟作业
-- 发布于 PyPI，`pipx install git-chronicle`
+- 发布于 PyPI，`pipx install gitannals`
 
 规划中：
 
