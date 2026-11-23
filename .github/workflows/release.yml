@@ -4,29 +4,36 @@ name: release
 # 用的是 Trusted Publishing（OIDC），不需要在仓库里存 API Token：
 #   PyPI → 项目 → Publishing → 添加 GitHub 发布者
 #   owner=CodeTeng  repo=git-chronicle  workflow=release.yml  environment=pypi
+#
+# 也支持手动重跑（workflow_dispatch）：PyPI 的 trusted publisher 没配好时，
+# 配完直接重跑这个工作流即可，不用重新打标签。
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
   id-token: write
 
 jobs:
+  # 发布前必须绿。没人想在 PyPI 上留下一个测试没过的版本。
+  test:
+    uses: ./.github/workflows/test.yml
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install --upgrade pip build
+      - run: python -m pip install --upgrade pip build twine
       - run: python -m build
       - name: 校验产物
-        run: |
-          python -m pip install twine
-          twine check dist/*
+        run: twine check dist/*
       - uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -44,7 +51,8 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    needs: build
+    # 只有真的发上 PyPI 了才建 Release，否则会留下一个指向空地方的公告
+    needs: [build, publish]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
