@@ -18,3 +18,11 @@ author-report.html
 
 .DS_Store
 Thumbs.db
+
+# 手工压测时克隆的外部仓库，不进版本库
+/bench/
+/vite/
+
+# 手工压测时克隆的外部仓库，不进版本库
+/bench/
+/vite/
