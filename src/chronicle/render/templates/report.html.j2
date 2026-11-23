@@ -51,6 +51,8 @@
   .rank{font-family:var(--mono);font-size:11px;color:var(--faint)}
   .cpath{font-family:var(--mono);font-size:12.5px;word-break:break-all}
   .cpath em{font-style:normal;color:var(--faint)}
+  /* 悬挂缩进：路径换行后，第二行对齐在圆点之后，而不是顶到圆点下面 */
+  .cpath.has-dot{text-indent:-11px;padding-left:11px}
   .cmeta{font-size:11.5px;color:var(--faint);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
   .cbar{height:3px;background:rgba(22,21,26,.07);border-radius:2px;margin-top:7px;overflow:hidden}
   .cbar span{display:block;height:100%;background:var(--ink);opacity:.55;border-radius:2px}
@@ -94,6 +96,10 @@
     .chapter-nav button{flex:0 0 auto;border-left:0;border-bottom:2px solid var(--line);padding:8px 12px}
     .chapter-nav button[aria-selected="true"]{border-left:0;border-bottom-color:var(--ink)}
     .chapter-nav .cn-range{display:none}
+    /* 标签列挤掉了路径的宽度，手机上换到下一行，让路径占满整行 */
+    .crow{grid-template-columns:22px minmax(0,1fr)}
+    .crow > div:last-child{grid-column:2}
+    .ctags{justify-content:flex-start}
   }
 </style>
 </head>
@@ -238,7 +244,7 @@
           <span class="rank">{{ '%02d' % loop.index }}</span>
           <div>
             {% set parts = f.path.rsplit('/', 1) %}
-            <div class="cpath">{% if 'active' in f.tags %}<span class="cdot" title="{{ t('ui.churn.active_dot') }}"></span>{% endif %}{% if parts|length > 1 %}<em>{{ parts[0] }}/</em>{{ parts[1] }}{% else %}{{ parts[0] }}{% endif %}</div>
+            <div class="cpath{% if 'active' in f.tags %} has-dot{% endif %}">{% if 'active' in f.tags %}<span class="cdot" title="{{ t('ui.churn.active_dot') }}"></span>{% endif %}{% if parts|length > 1 %}<em>{{ parts[0] }}/</em>{{ parts[1] }}{% else %}{{ parts[0] }}{% endif %}</div>
             <div class="cmeta">
               <span>{{ t('ui.churn.changes', n=f.changes) }}</span>
               <span>{{ f.insertions | signnum('+') }} / {{ f.deletions | signnum('−') }}</span>

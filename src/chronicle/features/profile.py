@@ -73,11 +73,13 @@ def resolve_author(
     *,
     aliases: dict[str, list[str]] | None = None,
     lang: str = "zh",
-) -> tuple[str, str, str, list[Commit], int]:
+    anon: bool = False,
+) -> tuple[str, str, str, list[Commit], int, str]:
     """按邮箱 / 姓名 / 邮箱前缀找人。
 
-    返回 (key, 显示名, 邮箱, 该人的提交, 自动合并的身份数)。
-    最后一项 >0 表示输入的名字命中了多个同名身份，已合并。
+    返回 (key, 显示名, 邮箱, 该人的提交, 自动合并的身份数, 提示)。
+    倒数第二项 >0 表示输入的名字命中了多个同名身份，已合并；
+    最后一项非空表示多候选里自动选了第一名，需要向用户说明。
     """
     parts = [part.strip() for part in (query or "").split(",") if part.strip()]
     merged = dict(aliases or {})
@@ -93,6 +95,7 @@ def resolve_author(
     if not needle:
         raise AuthorLookupError(t("ui.err.need_author", lang))
     auto_merged = 0
+    note = ""
 
     key: str | None = None
     if needle in table:
@@ -133,10 +136,15 @@ def resolve_author(
             key = resolver.canonical(pool[0])
             auto_merged = len(pool)
         elif len(pool) > 1:
-            raise AuthorLookupError(
-                t("ui.err.ambiguous", lang, q=query, n=len(pool)),
-                [_label(table[k]) for k in _by_weight(table, pool)],
-            )
+            top = _dominant(table, pool)
+            if top:
+                key = top
+                note = _picked_note(table, top, query, len(pool), lang, anon)
+            else:
+                raise AuthorLookupError(
+                    t("ui.err.ambiguous", lang, q=query, n=len(pool)),
+                    [_label(table[k]) for k in _by_weight(table, pool)],
+                )
         else:
             by_name = [k for k, e in table.items() if any(needle in n.lower() for n in e["names"])]
             by_email = [k for k in table if needle in k]
@@ -144,10 +152,15 @@ def resolve_author(
             if len(matches) == 1:
                 key = matches[0]
             elif len(matches) > 1:
-                raise AuthorLookupError(
-                    t("ui.err.ambiguous", lang, q=query, n=len(matches)),
-                    [_label(table[k]) for k in _by_weight(table, matches)],
-                )
+                top = _dominant(table, matches)
+                if top:
+                    key = top
+                    note = _picked_note(table, top, query, len(matches), lang, anon)
+                else:
+                    raise AuthorLookupError(
+                        t("ui.err.ambiguous", lang, q=query, n=len(matches)),
+                        [_label(table[k]) for k in _by_weight(table, matches)],
+                    )
             else:
                 raise AuthorLookupError(
                     t("ui.err.not_found", lang, q=query),
@@ -174,12 +187,39 @@ def resolve_author(
     name = entry["names"].most_common(1)[0][0]
     email = entry["emails"].most_common(1)[0][0]
     subset = [c for c in commits if resolver.key(c) == key]
-    return key, name, email, subset, auto_merged
+    return key, name, email, subset, auto_merged, note
 
 
 def _by_weight(table: dict, keys: list[str]) -> list[str]:
     """候选按提交数降序 —— 「manu」命中 4 个人时，第一名应该排在最前面。"""
     return sorted(keys, key=lambda k: -table[k]["commits"])
+
+
+def _dominant(table: dict, keys: list[str]) -> str | None:
+    """候选里有一骑绝尘的人（提交数是第二名的 10 倍以上）就直接选他。
+
+    gin 里搜「manu」会命中 4 个人，但 manu 真人比其余三个加起来还多 ——
+    让用户在候选里猜，不如自动选第一名，并把这事写进警告。
+    差距不到 10 倍就不选：同名里两个活跃贡献者的仓库并不少见。
+    """
+    ordered = _by_weight(table, keys)
+    if len(ordered) < 2:
+        return None
+    first = table[ordered[0]]["commits"]
+    second = table[ordered[1]]["commits"]
+    if second > 0 and first >= 10 * second:
+        return ordered[0]
+    return None
+
+
+def _picked_note(
+    table: dict, key: str, query: str, n: int, lang: str, anon: bool = False
+) -> str:
+    name = table[key]["names"].most_common(1)[0][0]
+    # 脱敏版不能带 {q}：查询词是用户输入的姓名片段，不在脱敏映射表里
+    if anon:
+        return t("ui.warn.auto_picked_anon", lang, n=n, name=name)
+    return t("ui.warn.auto_picked", lang, q=query, n=n, name=name)
 
 
 def _label(entry: dict) -> str:

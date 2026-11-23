@@ -409,64 +409,61 @@ def test_lookup_error_is_one_class() -> None:
     assert a.AuthorLookupError is p.AuthorLookupError
 
 
-# ---------------------------------------------------------------- 本轮回归
-
-def test_bare_repository(tmp_path: Path) -> None:
-    """bare 仓库没有工作树，show-toplevel 会失败，但 git log 照样能读。
-
-    服务端和 CI 缓存里到处都是 bare clone。
-    """
-    work = make_repo(tmp_path / "work")
-    bare = tmp_path / "bare.git"
-    subprocess.run(["git", "clone", "-q", "--bare", str(work), str(bare)], check=True)
-
-    report = analyze(Options(repo=str(bare)))
-    assert report["overview"]["commits"] > 0
+# ---------------------------------------------------------------- 0.1.6 低优先级项
 
 
-def test_overview_counts_add_up(report: dict) -> None:
-    """三个数并排出现，读者一定会加总：代码 + merge + 空 = 总数。"""
-    o = report["overview"]
-    assert o["commits"] == o["commits_code"] + o["merges"] + o["commits_empty"]
-
-
-def test_contributors_rest_excludes_bots(repo: Path) -> None:
-    """榜单只列真人，余量也必须排除机器人，否则「榜单 + 其他人」大于总数。"""
-    for day in range(20, 24):
-        (repo / "b.py").write_text(f"y = {day}\n", encoding="utf-8")
+def test_author_dominant_auto_pick(tmp_path: Path) -> None:
+    """候选里第一名是第二名的 10 倍以上：自动选第一名并留警告，不再逼用户猜。"""
+    repo = make_repo(tmp_path / "dominant")
+    for i in range(20):
+        (repo / "src/a.py").write_text(f"# v{i}\n", encoding="utf-8")
         git(repo, "add", "-A")
-        git(repo, "commit", "-q", "-m", "chore: bump",
-            "--author", "dependabot[bot] <1+dependabot[bot]@users.noreply.github.com>",
-            when=f"2026-02-{day}T09:00:00+08:00")
+        git(repo, "commit", "-q", "-m", f"chore: v{i}",
+            "--author", "Alex Chen <alex.chen@example.com>",
+            when=f"2026-03-{i + 1:02d}T10:00:00+08:00")
+    (repo / "src/b.py").write_text("b = 1\n", encoding="utf-8")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "chore: one",
+        "--author", "Alex Wu <alex.wu@example.com>",
+        when="2026-03-25T10:00:00+08:00")
 
-    data = analyze(Options(repo=str(repo)))
-    c = data["contributors"]
-    listed = sum(r["commits"] for r in c["rows"]) + c["rest_commits"]
-    assert listed == c["total_commits"] - c["bot_commits"]
+    data = analyze(Options(repo=str(repo), view="author", author="alex"))
+    assert data["persona"]["name"] == "Alex Chen"
+    assert any("自动选" in w for w in data["warnings"]), data["warnings"]
 
-
-def test_config_lang_survives_cli_default(tmp_path: Path) -> None:
-    """配置文件设了英文，命令行没传 --lang 就应该是英文。
-
-    曾经 CLI 的默认值 "zh" 无条件覆盖 toml —— 配置文件形同虚设。
-    """
-    from chronicle.config import load_settings
-
-    repo = make_repo(tmp_path / "cfg")
-    (repo / ".annals.toml").write_text('[report]\nlang = "en"\ntone = "roast"\n', encoding="utf-8")
-
-    settings = load_settings(repo, overrides={})
-    assert settings.lang == "en"
-    assert settings.tone == "roast"
-
-    overridden = load_settings(repo, overrides={"lang": "zh"})
-    assert overridden.lang == "zh"
-    assert overridden.tone == "roast", "没被覆盖的项应保留配置文件的值"
+    # 脱敏版：查询词是用户输入的姓名片段，不能原样出现在可外发的报告里
+    anon = analyze(
+        Options(repo=str(repo), view="author", author="alex", anon=True)
+    )
+    assert "alex" not in str(anon).lower()
+    assert any("自动选" in w for w in anon["warnings"]), anon["warnings"]
 
 
-def test_lookup_error_is_one_class() -> None:
-    """analyze 与 features 必须抛同一个异常类，否则调用方 except 捕获不到。"""
-    import chronicle.analyze as a
-    import chronicle.features.profile as p
+def test_author_close_candidates_still_ambiguous(tmp_path: Path) -> None:
+    """差距不到 10 倍就必须继续报歧义 —— 自动选择只留给一骑绝尘的情况。"""
+    repo = make_repo(tmp_path / "close")
+    for i in range(10):
+        (repo / "src/a.py").write_text(f"# v{i}\n", encoding="utf-8")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", f"chore: v{i}",
+            "--author", "Sam A <sam.a@example.com>",
+            when=f"2026-03-{i + 1:02d}T10:00:00+08:00")
+    for i in range(5):
+        (repo / "src/b.py").write_text(f"# w{i}\n", encoding="utf-8")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", f"chore: w{i}",
+            "--author", "Sam B <sam.b@example.com>",
+            when=f"2026-04-{i + 1:02d}T10:00:00+08:00")
 
-    assert a.AuthorLookupError is p.AuthorLookupError
+    with pytest.raises(AuthorLookupError):
+        analyze(Options(repo=str(repo), view="author", author="sam"))
+
+
+def test_narrow_screen_churn_layout(report: dict) -> None:
+    """窄屏：标签列换到下一行、路径占满整行；圆点用悬挂缩进，不跟换行文字挤在一起。"""
+    html = build_html(report)
+    assert ".crow{grid-template-columns:22px minmax(0,1fr)}" in html
+    assert ".crow > div:last-child{grid-column:2}" in html
+    assert ".cpath.has-dot{text-indent:-11px;padding-left:11px}" in html
+    if any("active" in f["tags"] for f in report["churn"]["files"]):
+        assert 'class="cpath has-dot"' in html

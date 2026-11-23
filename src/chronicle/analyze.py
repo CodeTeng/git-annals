@@ -196,11 +196,13 @@ def _author_report(
         report["warnings"].append(t("ui.warn.default_author", options.lang, who=query))
     query, aliases = profile.resolve_aliases(query, options.author_aliases)
     try:
-        key, name, email, subset, auto_merged = profile.resolve_author(
-            commits, query, aliases=aliases, lang=options.lang
+        key, name, email, subset, auto_merged, note = profile.resolve_author(
+            commits, query, aliases=aliases, lang=options.lang, anon=options.anon
         )
     except profile.AuthorLookupError as exc:
         raise AuthorLookupError(str(exc), exc.candidates) from exc
+    if note:
+        report["warnings"].append(note)
 
     authors_total = len({(c.email or c.author).lower() for c in commits})
     report["meta"]["author"] = {"key": key, "name": name, "email": email}
