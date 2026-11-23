@@ -135,7 +135,7 @@ def resolve_author(
         elif len(pool) > 1:
             raise AuthorLookupError(
                 t("ui.err.ambiguous", lang, q=query, n=len(pool)),
-                [_label(table[k]) for k in pool],
+                [_label(table[k]) for k in _by_weight(table, pool)],
             )
         else:
             by_name = [k for k, e in table.items() if any(needle in n.lower() for n in e["names"])]
@@ -146,12 +146,12 @@ def resolve_author(
             elif len(matches) > 1:
                 raise AuthorLookupError(
                     t("ui.err.ambiguous", lang, q=query, n=len(matches)),
-                    [_label(table[k]) for k in matches],
+                    [_label(table[k]) for k in _by_weight(table, matches)],
                 )
             else:
                 raise AuthorLookupError(
                     t("ui.err.not_found", lang, q=query),
-                    [_label(table[k]) for k in table],
+                    [_label(table[k]) for k in _by_weight(table, list(table))],
                 )
 
     # 同一个人换了邮箱（含 GitHub noreply），只看输入的名字永远拼不全。
@@ -175,6 +175,11 @@ def resolve_author(
     email = entry["emails"].most_common(1)[0][0]
     subset = [c for c in commits if resolver.key(c) == key]
     return key, name, email, subset, auto_merged
+
+
+def _by_weight(table: dict, keys: list[str]) -> list[str]:
+    """候选按提交数降序 —— 「manu」命中 4 个人时，第一名应该排在最前面。"""
+    return sorted(keys, key=lambda k: -table[k]["commits"])
 
 
 def _label(entry: dict) -> str:

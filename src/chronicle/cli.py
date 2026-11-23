@@ -51,7 +51,9 @@ def main(
     author: str | None = typer.Option(
         None, "--author", "-a", help="画像对象：姓名或邮箱。多邮箱用逗号合并，如 a@x.com,b@y.com。"
     ),
-    tone: str = typer.Option("tech", "--tone", "-t", help="叙事风格：tech 硬核纪实 / roast 毒舌吐槽。"),
+    tone: str | None = typer.Option(
+        None, "--tone", "-t", help="叙事风格：tech 硬核纪实 / roast 毒舌吐槽，默认 tech。"
+    ),
     no_ai: bool = typer.Option(False, "--no-ai", help="纯离线统计模式，不调用任何 LLM。"),
     anon: bool = typer.Option(False, "--anon", help="脱敏：邮箱打码、作者名替换。"),
     since: str | None = typer.Option(None, "--since", help="起始时间，如 2025-01-01。"),
@@ -59,7 +61,9 @@ def main(
     output: Path | None = typer.Option(None, "--output", "-o", help="报告输出路径（.html）。"),
     save_json: Path | None = typer.Option(None, "--json", help="额外导出中间态 Chronicle JSON。"),
     open_browser: bool = typer.Option(False, "--open", help="生成完成后自动在浏览器打开。"),
-    lang: str = typer.Option("zh", "--lang", help="报告语言：zh / en。"),
+    # 默认值故意留 None：写成 "zh" 会无条件覆盖 .annals.toml 里的设置 ——
+    # 配置文件设了英文，命令行没传 --lang，结果还是中文。
+    lang: str | None = typer.Option(None, "--lang", help="报告语言：zh / en，默认 zh。"),
     all_branches: bool = typer.Option(False, "--all", help="分析所有分支，而非仅当前 HEAD。"),
     follow_renames: bool = typer.Option(
         False, "--follow-renames", help="开启重命名追踪（更准，但大仓库会明显变慢）。"
@@ -79,24 +83,24 @@ def main(
     if view not in ("project", "author"):
         console.print(f"[red]未知的 --view：{view}，可选 project / author[/red]")
         raise typer.Exit(2)
-    if tone not in ("tech", "roast"):
+    if tone is not None and tone not in ("tech", "roast"):
         console.print(f"[red]未知的 --tone：{tone}，可选 tech / roast[/red]")
         raise typer.Exit(2)
-    if lang not in ("zh", "en"):
+    if lang is not None and lang not in ("zh", "en"):
         console.print(f"[red]未知的 --lang：{lang}，可选 zh / en[/red]")
         raise typer.Exit(2)
 
     try:
         root = runner.resolve_repo(path)
     except GitError as exc:
-        _report_git_error(exc, lang)
+        _report_git_error(exc, lang or "zh")
         raise typer.Exit(1) from exc
 
     settings = load_settings(
         root,
         overrides={
-            "lang": lang,
-            "tone": tone,
+            **({"lang": lang} if lang else {}),
+            **({"tone": tone} if tone else {}),
             "ignore": list(ignore or []),
             "model": model,
             "llm_base_url": base_url,
@@ -137,7 +141,7 @@ def main(
             console.print(f"   [dim]{candidate}[/dim]")
         raise typer.Exit(2) from exc
     except GitError as exc:
-        _report_git_error(exc, lang)
+        _report_git_error(exc, lang or "zh")
         raise typer.Exit(1) from exc
 
     is_author = view == "author"

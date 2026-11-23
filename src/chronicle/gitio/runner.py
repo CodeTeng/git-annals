@@ -68,14 +68,24 @@ def _base(repo: Path) -> list[str]:
 
 
 def resolve_repo(path: str | os.PathLike[str]) -> Path:
-    """把任意子目录解析成仓库根目录。"""
+    """把任意子目录解析成仓库根目录。
+
+    bare 仓库没有工作树，`--show-toplevel` 会直接失败，但 `git log` 照样能读 ——
+    服务端和 CI 缓存里到处都是 bare clone，不支持等于把这类用户挡在门外。
+    """
     candidate = Path(path).expanduser()
     if not candidate.exists():
         raise GitError(f"路径不存在：{candidate}")
     out, code = run(candidate, ["rev-parse", "--show-toplevel"], check=False)
-    if code != 0 or not out.strip():
-        raise GitError(f"不是 Git 仓库：{candidate}")
-    return Path(out.strip())
+    if code == 0 and out.strip():
+        return Path(out.strip())
+
+    git_dir, git_code = run(candidate, ["rev-parse", "--git-dir"], check=False)
+    if git_code == 0 and git_dir.strip():
+        bare, _ = run(candidate, ["rev-parse", "--is-bare-repository"], check=False)
+        if bare.strip().lower() in ("true", "yes"):
+            return candidate
+    raise GitError(f"不是 Git 仓库：{candidate}")
 
 
 def run(

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from datetime import date
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -15,7 +16,7 @@ from chronicle.analyze import AuthorLookupError, Options, analyze
 from chronicle.clean import BULK_LINE_THRESHOLD, classify, file_category, is_noise
 from chronicle.gitio.parse import normalize_renamed_path
 from chronicle.render import build_html
-from helpers import git, write
+from helpers import git, make_repo, write
 
 
 @pytest.fixture(scope="module")
@@ -343,3 +344,129 @@ def test_repo_committed_in_utc(tmp_path: Path) -> None:
 
     report = analyze(Options(repo=str(root)))
     assert report["overview"]["commits"] == 1
+
+
+# ---------------------------------------------------------------- 本轮回归
+
+def test_bare_repository(tmp_path: Path) -> None:
+    """bare 仓库没有工作树，show-toplevel 会失败，但 git log 照样能读。
+
+    服务端和 CI 缓存里到处都是 bare clone。
+    """
+    work = make_repo(tmp_path / "work")
+    bare = tmp_path / "bare.git"
+    subprocess.run(["git", "clone", "-q", "--bare", str(work), str(bare)], check=True)
+
+    report = analyze(Options(repo=str(bare)))
+    assert report["overview"]["commits"] > 0
+
+
+def test_overview_counts_add_up(report: dict) -> None:
+    """三个数并排出现，读者一定会加总：代码 + merge + 空 = 总数。"""
+    o = report["overview"]
+    assert o["commits"] == o["commits_code"] + o["merges"] + o["commits_empty"]
+
+
+def test_contributors_rest_excludes_bots(repo: Path) -> None:
+    """榜单只列真人，余量也必须排除机器人，否则「榜单 + 其他人」大于总数。"""
+    for day in range(20, 24):
+        (repo / "b.py").write_text(f"y = {day}\n", encoding="utf-8")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", "chore: bump",
+            "--author", "dependabot[bot] <1+dependabot[bot]@users.noreply.github.com>",
+            when=f"2026-02-{day}T09:00:00+08:00")
+
+    data = analyze(Options(repo=str(repo)))
+    c = data["contributors"]
+    listed = sum(r["commits"] for r in c["rows"]) + c["rest_commits"]
+    assert listed == c["total_commits"] - c["bot_commits"]
+
+
+def test_config_lang_survives_cli_default(tmp_path: Path) -> None:
+    """配置文件设了英文，命令行没传 --lang 就应该是英文。
+
+    曾经 CLI 的默认值 "zh" 无条件覆盖 toml —— 配置文件形同虚设。
+    """
+    from chronicle.config import load_settings
+
+    repo = make_repo(tmp_path / "cfg")
+    (repo / ".annals.toml").write_text('[report]\nlang = "en"\ntone = "roast"\n', encoding="utf-8")
+
+    settings = load_settings(repo, overrides={})
+    assert settings.lang == "en"
+    assert settings.tone == "roast"
+
+    overridden = load_settings(repo, overrides={"lang": "zh"})
+    assert overridden.lang == "zh"
+    assert overridden.tone == "roast", "没被覆盖的项应保留配置文件的值"
+
+
+def test_lookup_error_is_one_class() -> None:
+    """analyze 与 features 必须抛同一个异常类，否则调用方 except 捕获不到。"""
+    import chronicle.analyze as a
+    import chronicle.features.profile as p
+
+    assert a.AuthorLookupError is p.AuthorLookupError
+
+
+# ---------------------------------------------------------------- 本轮回归
+
+def test_bare_repository(tmp_path: Path) -> None:
+    """bare 仓库没有工作树，show-toplevel 会失败，但 git log 照样能读。
+
+    服务端和 CI 缓存里到处都是 bare clone。
+    """
+    work = make_repo(tmp_path / "work")
+    bare = tmp_path / "bare.git"
+    subprocess.run(["git", "clone", "-q", "--bare", str(work), str(bare)], check=True)
+
+    report = analyze(Options(repo=str(bare)))
+    assert report["overview"]["commits"] > 0
+
+
+def test_overview_counts_add_up(report: dict) -> None:
+    """三个数并排出现，读者一定会加总：代码 + merge + 空 = 总数。"""
+    o = report["overview"]
+    assert o["commits"] == o["commits_code"] + o["merges"] + o["commits_empty"]
+
+
+def test_contributors_rest_excludes_bots(repo: Path) -> None:
+    """榜单只列真人，余量也必须排除机器人，否则「榜单 + 其他人」大于总数。"""
+    for day in range(20, 24):
+        (repo / "b.py").write_text(f"y = {day}\n", encoding="utf-8")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", "chore: bump",
+            "--author", "dependabot[bot] <1+dependabot[bot]@users.noreply.github.com>",
+            when=f"2026-02-{day}T09:00:00+08:00")
+
+    data = analyze(Options(repo=str(repo)))
+    c = data["contributors"]
+    listed = sum(r["commits"] for r in c["rows"]) + c["rest_commits"]
+    assert listed == c["total_commits"] - c["bot_commits"]
+
+
+def test_config_lang_survives_cli_default(tmp_path: Path) -> None:
+    """配置文件设了英文，命令行没传 --lang 就应该是英文。
+
+    曾经 CLI 的默认值 "zh" 无条件覆盖 toml —— 配置文件形同虚设。
+    """
+    from chronicle.config import load_settings
+
+    repo = make_repo(tmp_path / "cfg")
+    (repo / ".annals.toml").write_text('[report]\nlang = "en"\ntone = "roast"\n', encoding="utf-8")
+
+    settings = load_settings(repo, overrides={})
+    assert settings.lang == "en"
+    assert settings.tone == "roast"
+
+    overridden = load_settings(repo, overrides={"lang": "zh"})
+    assert overridden.lang == "zh"
+    assert overridden.tone == "roast", "没被覆盖的项应保留配置文件的值"
+
+
+def test_lookup_error_is_one_class() -> None:
+    """analyze 与 features 必须抛同一个异常类，否则调用方 except 捕获不到。"""
+    import chronicle.analyze as a
+    import chronicle.features.profile as p
+
+    assert a.AuthorLookupError is p.AuthorLookupError

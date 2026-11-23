@@ -17,6 +17,8 @@ def build(commits: list[Commit]) -> dict:
             "commits": 0,
             "commits_code": 0,
             "merges": 0,
+            "commits_empty": 0,
+            "commits_empty": 0,
             "insertions": 0,
             "deletions": 0,
             "churn": 0,
@@ -65,6 +67,18 @@ def build(commits: list[Commit]) -> dict:
         "commits": len(commits),
         "commits_code": sum(1 for c in commits if c.is_code_commit),
         "merges": sum(1 for c in commits if c.is_merge),
+        # 既不是 merge、又没有任何文件变更的提交（空提交 / 只改了噪音文件）。
+        # 单独列出来，是为了让 commits = commits_code + merges + commits_empty 成立 ——
+        # 三个数并排出现时，读者一定会去加总。
+        "commits_empty": sum(
+            1 for c in commits if not c.is_merge and not c.changes
+        ),
+        # 既不是 merge、又没有任何文件变更的提交（空提交 / 只改了噪音文件）。
+        # 单独列出来，是为了让 commits = commits_code + merges + commits_empty 成立 ——
+        # 三个数并排出现时，读者一定会去加总。
+        "commits_empty": sum(
+            1 for c in commits if not c.is_merge and not c.changes
+        ),
         "insertions": insertions,
         "deletions": deletions,
         "churn": insertions + deletions,

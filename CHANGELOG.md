@@ -2,6 +2,74 @@
 
 > 发布名从 `git-chronicle` 改为 **`gitannals`**：PyPI 上的 `git-chronicle` 已被另一个同类项目占用（其命令也叫 `chronicle`），为避免安装与命令冲突整体改名。仓库与 PyPI 项目现在同名：`CodeTeng/git-annals` / `gitannals`。
 
+## 0.1.6 — 2026-11-23
+
+按功能点组织的完整测试（83 项功能检查 + 123 项自动化测试），发现并修掉 4 个 bug。
+报告见 `docs/functional-test-report-2026-11-23.md`。
+
+**P0**
+
+- **bare 仓库完全不可用**。`resolve_repo` 只用 `rev-parse --show-toplevel`，
+  而 bare 仓库没有工作树，这条命令必然失败 —— 但它其实是合法仓库，`git log` 照样能读。
+  CI 缓存、`--mirror` 镜像、服务端部署的全是 bare clone，这类用户一条命令都跑不了。
+  现在回退到 `--git-dir` + `--is-bare-repository` 判断。
+
+**P1**
+
+- **贡献者「其他人」把机器人算进去了**。榜单移除了机器人，余量却仍按总数算，
+  导致「榜单 + 其他人」大于总数（gin 多出 126 次）。余量现在同样排除机器人。
+- **`.annals.toml` 被 CLI 默认值覆盖**。`--lang` 默认值 `"zh"` 无条件写进 overrides，
+  配置文件写了 `lang = "en"` 也不生效 —— 配置系统实际上只有 ignore 一项能用。
+  改成 None 默认，只有显式传参才覆盖。`--tone` 同样问题。
+
+**P2**
+
+- **两个同名异常类**。`analyze.AuthorLookupError` 与 `features.profile.AuthorLookupError`
+  是两个不同的类，调用方 `except` 捕获不到。现在复用同一个。
+- `--author` 命中多人时，候选按提交数降序，第一名排最前。
+
+**数据完整性**
+
+- `overview` 新增 `commits_empty`（既非 merge 又无文件变更的提交），
+  让 `总数 = 代码 + merge + 空` 成立。三个数并排出现时读者一定会加总。
+
+**测试**：118 → 123 项。新增覆盖 bare 仓库、概览加总、余量排除机器人、
+配置优先级、异常类一致性。
+
+## 0.1.6 — 2026-11-23
+
+按功能点组织的完整测试（83 项功能检查 + 123 项自动化测试），发现并修掉 4 个 bug。
+报告见 `docs/functional-test-report-2026-11-23.md`。
+
+**P0**
+
+- **bare 仓库完全不可用**。`resolve_repo` 只用 `rev-parse --show-toplevel`，
+  而 bare 仓库没有工作树，这条命令必然失败 —— 但它其实是合法仓库，`git log` 照样能读。
+  CI 缓存、`--mirror` 镜像、服务端部署的全是 bare clone，这类用户一条命令都跑不了。
+  现在回退到 `--git-dir` + `--is-bare-repository` 判断。
+
+**P1**
+
+- **贡献者「其他人」把机器人算进去了**。榜单移除了机器人，余量却仍按总数算，
+  导致「榜单 + 其他人」大于总数（gin 多出 126 次）。余量现在同样排除机器人。
+- **`.annals.toml` 被 CLI 默认值覆盖**。`--lang` 默认值 `"zh"` 无条件写进 overrides，
+  配置文件写了 `lang = "en"` 也不生效 —— 配置系统实际上只有 ignore 一项能用。
+  改成 None 默认，只有显式传参才覆盖。`--tone` 同样问题。
+
+**P2**
+
+- **两个同名异常类**。`analyze.AuthorLookupError` 与 `features.profile.AuthorLookupError`
+  是两个不同的类，调用方 `except` 捕获不到。现在复用同一个。
+- `--author` 命中多人时，候选按提交数降序，第一名排最前。
+
+**数据完整性**
+
+- `overview` 新增 `commits_empty`（既非 merge 又无文件变更的提交），
+  让 `总数 = 代码 + merge + 空` 成立。三个数并排出现时读者一定会加总。
+
+**测试**：118 → 123 项。新增覆盖 bare 仓库、概览加总、余量排除机器人、
+配置优先级、异常类一致性。
+
 ## 0.1.5 — 2026-11-23
 
 只修文档，代码无改动。

@@ -107,6 +107,7 @@ def build(commits: list[Commit], *, top: int = 12) -> dict:
         "bot_commits": bot_commits,
         "single_author": len(rows) - len(bot_keys) == 1,
         "concentration": round2(top_rows[0]["share"]) if top_rows else 0.0,
-        "rest_commits": total - sum(r["commits"] for r in top_rows),
+        # 榜单只列真人，余量也必须同样排除机器人，否则「榜单 + 其他人」大于总数
+        "rest_commits": total - bot_commits - sum(r["commits"] for r in top_rows),
         "empty": False,
     }

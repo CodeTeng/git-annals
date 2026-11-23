@@ -21,6 +21,7 @@ from typing import Any
 from . import TOOL_NAME, __version__
 from .clean import DEFAULT_IGNORE, filter_noise
 from .config import LlmSettings, Settings
+from .features import profile as profile_errors
 from .features import (
     churn,
     contributors,
@@ -44,12 +45,9 @@ SCHEMA_VERSION = 1
 ProgressHook = Callable[[str, str], None]
 
 
-class AuthorLookupError(LookupError):
-    """转发画像模块的查找错误，避免 CLI 直接依赖 features。"""
-
-    def __init__(self, message: str, candidates: list[str] | None = None) -> None:
-        super().__init__(message)
-        self.candidates = candidates or []
+# 直接复用 features 里的异常。曾经这里另起了一个同名类，导致调用方
+# `except AuthorLookupError` 捕获不到 —— 两个类的名字一样，类型却不同。
+AuthorLookupError = profile_errors.AuthorLookupError
 
 
 @dataclass(slots=True)
