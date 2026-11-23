@@ -72,6 +72,7 @@ def resolve_author(
     query: str,
     *,
     aliases: dict[str, list[str]] | None = None,
+    lang: str = "zh",
 ) -> tuple[str, str, str, list[Commit]]:
     """按邮箱 / 姓名 / 邮箱前缀找人，返回 (key, 显示名, 邮箱, 该人的提交)。
 
@@ -85,11 +86,11 @@ def resolve_author(
     resolver = build_resolver(merged)
     table = _index(commits, resolver)
     if not table:
-        raise AuthorLookupError("仓库里没有提交")
+        raise AuthorLookupError(t("ui.err.no_commits", lang))
 
     needle = (parts[0] if parts else "").lower()
     if not needle:
-        raise AuthorLookupError("--author 不能为空")
+        raise AuthorLookupError(t("ui.err.need_author", lang))
 
     key: str | None = None
     if needle in table:
@@ -102,12 +103,12 @@ def resolve_author(
             key = matches[0]
         elif len(matches) > 1:
             raise AuthorLookupError(
-                f"「{query}」匹配到 {len(matches)} 个人，请写得更具体",
+                t("ui.err.ambiguous", lang, q=query, n=len(matches)),
                 [_label(table[k]) for k in matches],
             )
         else:
             raise AuthorLookupError(
-                f"没找到「{query}」，仓库里的贡献者是：",
+                t("ui.err.not_found", lang, q=query),
                 [_label(table[k]) for k in table],
             )
 
@@ -143,7 +144,7 @@ def build_persona(
     repo_authors: int = 1,
 ) -> dict:
     if not subset:
-        raise AuthorLookupError("这个人没有提交")
+        raise AuthorLookupError(t("ui.err.no_person_commits", lang))
 
     ordered = sorted(subset, key=lambda c: c.authored_at)
     first, last = ordered[0].authored_at, ordered[-1].authored_at

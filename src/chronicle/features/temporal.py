@@ -12,9 +12,9 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import date
 
+from ..i18n import weekdays
 from ..models import Commit
 from ._util import (
-    WEEKDAY_ZH,
     iter_month_keys,
     iter_week_keys,
     month_key,
@@ -97,7 +97,8 @@ def _bounds(key: str, granularity: str) -> tuple[date, date]:
     return start, date.fromordinal(end.toordinal() - 1)
 
 
-def build_rhythm(commits: list[Commit]) -> dict:
+def build_rhythm(commits: list[Commit], *, lang: str = "zh") -> dict:
+    labels = weekdays(lang)
     matrix = [[0] * 24 for _ in range(7)]
     for commit in commits:
         moment = commit.authored_at
@@ -122,10 +123,10 @@ def build_rhythm(commits: list[Commit]) -> dict:
             "dow": peak_dow,
             "hour": peak_hour,
             "count": matrix[peak_dow][peak_hour],
-            "label": f"{WEEKDAY_ZH[peak_dow]} {peak_hour}:00",
+            "label": f"{labels[peak_dow]} {peak_hour:02d}:00",
         },
         "night_ratio": pct(night, total),
         "weekend_ratio": pct(weekend, total),
-        "weekday_labels": list(WEEKDAY_ZH),
+        "weekday_labels": list(labels),
         "max_cell": max((max(row) for row in matrix), default=0),
     }

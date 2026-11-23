@@ -146,7 +146,7 @@ def _project_report(
     emit("timeline", "聚合时间序列")
     timeline = temporal.build_timeline(commits)
     report["timeline"] = timeline
-    report["rhythm"] = temporal.build_rhythm(commits)
+    report["rhythm"] = temporal.build_rhythm(commits, lang=options.lang)
 
     emit("churn", "计算文件修罗场评分")
     report["churn"] = churn.build(commits, top_files=options.top_files)
@@ -192,10 +192,12 @@ def _author_report(
     if not query:
         counts = Counter((c.email or c.author).lower() for c in commits)
         query = counts.most_common(1)[0][0]
-        report["warnings"].append(f"未指定 --author，默认分析提交最多的人：{query}")
+        report["warnings"].append(t("ui.warn.default_author", options.lang, who=query))
     query, aliases = profile.resolve_aliases(query, options.author_aliases)
     try:
-        key, name, email, subset = profile.resolve_author(commits, query, aliases=aliases)
+        key, name, email, subset = profile.resolve_author(
+            commits, query, aliases=aliases, lang=options.lang
+        )
     except profile.AuthorLookupError as exc:
         raise AuthorLookupError(str(exc), exc.candidates) from exc
 
@@ -215,7 +217,7 @@ def _author_report(
 
     emit("timeline", "聚合个人时间序列")
     report["timeline"] = temporal.build_timeline(subset)
-    report["rhythm"] = temporal.build_rhythm(subset)
+    report["rhythm"] = temporal.build_rhythm(subset, lang=options.lang)
 
     emit("chapters", "对齐项目阶段")
     project_timeline = temporal.build_timeline(commits)
@@ -244,14 +246,12 @@ def _author_report(
     )
 
     if report["persona"]["span_days"] < 7:
-        report["warnings"].append("这个人的活跃区间不足 7 天，画像只能当趣闻看。")
+        report["warnings"].append(t("ui.warn.short_span", options.lang))
     if len(subset) < 10:
-        report["warnings"].append("提交数少于 10，标签判定不稳定。")
+        report["warnings"].append(t("ui.warn.few_personal", options.lang))
     if report["persona"]["share"] < 30 and authors_total > 1:
         report["warnings"].append(
-            "这个人只占全仓库 "
-            f"{report['persona']['share']}% 的提交。如果这其实是同一个人用了多个邮箱，"
-            '用 --author "邮箱1,邮箱2" 合并，或在 .chronicle.toml 的 [author.aliases] 里固定下来。'
+            t("ui.warn.low_share", options.lang, share=report["persona"]["share"])
         )
 
     _append_data_warnings(report, options)
@@ -262,20 +262,18 @@ def _author_report(
 
 
 def _append_data_warnings(report: dict, options: Options) -> None:
+    lang = options.lang
     block = report.get("overview")
     if block:
         if block["merges"] > block["commits"] * 0.3:
-            report["warnings"].append(
-                "merge 提交占比超过 30%，代码行数统计可能偏低（合并提交默认不计 diff）。"
-            )
+            report["warnings"].append(t("ui.warn.merges", lang))
         if block["bulk_commits"]:
             lines = block["bulk_insertions"] + block["bulk_deletions"]
             report["warnings"].append(
-                f"检测到 {block['bulk_commits']} 次批量导入（{lines:,} 行），"
-                "已从代码量统计中剔除 —— 多为数据集或生成物。"
+                t("ui.warn.bulk", lang, n=block["bulk_commits"], lines=f"{lines:,}")
             )
         if block["commits"] < 20:
-            report["warnings"].append("提交数少于 20，章节切分和趋势判断的置信度有限。")
+            report["warnings"].append(t("ui.warn.few_commits", lang, n=20))
 
 
 def _build_meta(
@@ -312,7 +310,7 @@ def _empty_payload(options: Options) -> dict[str, Any]:
     return {
         "overview": overview.build([]),
         "timeline": {"granularity": "week", "points": [], "totals": {"commits": 0}},
-        "rhythm": temporal.build_rhythm([]),
+        "rhythm": temporal.build_rhythm([], lang=options.lang),
         "churn": {"files": [], "dirs": [], "empty": True, "counted_files": 0, "top_score": 0},
         "languages": {"rows": [], "trend": {"keys": [], "series": []}, "empty": True},
         "contributors": {"rows": [], "total_commits": 0, "empty": True},

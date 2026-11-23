@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ persona.name }} · 开发者画像</title>
+<title>{{ persona.name }} · {{ t('ui.author.title_suffix') }}</title>
 <style>
 {% include "_style.css.j2" %}
 
@@ -92,14 +92,14 @@
       {% for tag in persona.tags %}<span class="tag">{{ tag.label }}</span>{% endfor %}
     </div>
     <dl class="stats">
-      <div class="stat"><dt>提交</dt><dd>{{ persona.commits | num }}</dd></div>
-      <div class="stat"><dt>占全仓库</dt><dd>{{ persona.share }}<small>%</small></dd></div>
-      <div class="stat"><dt>新增</dt><dd style="color:#5DCAA5">{{ persona.insertions | signnum('+') }}</dd></div>
-      <div class="stat"><dt>删除</dt><dd style="color:#F0997B">{{ persona.deletions | signnum('−') }}</dd></div>
-      <div class="stat"><dt>活跃天数</dt><dd>{{ persona.active_days }}<small>/{{ persona.span_days }}</small></dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.commits') }}</dt><dd>{{ persona.commits | num }}</dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.share_of_repo') }}</dt><dd>{{ persona.share }}<small>%</small></dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.added') }}</dt><dd style="color:#5DCAA5">{{ persona.insertions | signnum('+') }}</dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.removed') }}</dt><dd style="color:#F0997B">{{ persona.deletions | signnum('−') }}</dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.active_days') }}</dt><dd>{{ persona.active_days }}<small>/{{ persona.span_days }}</small></dd></div>
     </dl>
     <div class="hero-actions">
-      <button class="btn" id="export-card" type="button">导出分享卡 PNG</button>
+      <button class="btn" id="export-card" type="button">{{ t('ui.export.btn') }}</button>
       <span class="btn-note" id="export-note">{{ meta.repo.name }} · 720 × 1080</span>
     </div>
   </div>
@@ -108,7 +108,7 @@
 <main class="wrap">
 
   <section class="section" id="position">
-    <div class="eyebrow">01 / 坐标</div>
+    <div class="eyebrow">{{ t('ui.author.s1.eyebrow') }}</div>
     <h2>{{ t('author.position') }}</h2>
     <p class="lead">{{ persona.verdict }}</p>
     <div class="block" style="margin-top:22px">
@@ -117,50 +117,50 @@
         <span class="rest" style="width:{{ 100 - persona.share }}%"></span>
       </div>
       <div class="sharekey">
-        <span>{{ persona.name }} · {{ persona.commits }} 次提交</span>
-        <span>其他人 · {{ persona.repo_commits - persona.commits }} 次</span>
+        <span>{{ t('ui.author.mine', name=persona.name, n=persona.commits) }}</span>
+        <span>{{ t('ui.author.others', n=persona.repo_commits - persona.commits) }}</span>
       </div>
       <div class="dirs" style="margin-top:24px">
-        <span class="dchip">首次提交 {{ persona.first_commit_at[:10] }}</span>
-        <span class="dchip">最近提交 {{ persona.last_commit_at[:10] }}</span>
-        <span class="dchip">平均 {{ persona.avg_commits_per_active_day }} 次/活跃日</span>
-        <span class="dchip">净增 {{ persona.net | num }} 行</span>
+        <span class="dchip">{{ t('ui.author.first_commit', d=persona.first_commit_at[:10]) }}</span>
+        <span class="dchip">{{ t('ui.author.last_commit', d=persona.last_commit_at[:10]) }}</span>
+        <span class="dchip">{{ t('ui.author.per_active_day', v=persona.avg_commits_per_active_day) }}</span>
+        <span class="dchip">{{ t('ui.author.net', n=persona.net) }}</span>
       </div>
     </div>
   </section>
 
   <section class="section" id="rhythm">
-    <div class="eyebrow">02 / 作息</div>
+    <div class="eyebrow">{{ t('ui.author.s2.eyebrow') }}</div>
     <h2>{{ t('author.rhythm') }}</h2>
-    <p class="lead">只看你自己的提交。深色格子代表那个小时提交更密集。</p>
+    <p class="lead">{{ t('ui.author.rhythm_lead') }}</p>
     <div class="block" style="margin-top:22px">
       {{ svg_heatmap }}
       <div class="rhythm-stats">
-        <div>深夜（0–6 点）<b>{{ persona.night_ratio }}%</b></div>
-        <div>周末<b>{{ persona.weekend_ratio }}%</b></div>
-        <div>最常在<b>{{ '%02d' % persona.peak_hour }}:00</b></div>
-        <div>最长连续<b>{{ persona.streak_days }} 天</b></div>
+        <div>{{ t('ui.rhythm.night') }}<b>{{ persona.night_ratio }}%</b></div>
+        <div>{{ t('ui.rhythm.weekend') }}<b>{{ persona.weekend_ratio }}%</b></div>
+        <div>{{ t('ui.author.most_often') }}<b>{{ '%02d' % persona.peak_hour }}:00</b></div>
+        <div>{{ t('ui.author.streak') }}<b>{{ t('ui.days', n=persona.streak_days) }}</b></div>
       </div>
     </div>
   </section>
 
   <section class="section" id="cadence">
-    <div class="eyebrow">03 / 节奏</div>
+    <div class="eyebrow">{{ t('ui.author.s3.eyebrow') }}</div>
     <h2>{{ t('author.cadence') }}</h2>
-    <p class="lead">每根柱子是一周。空的地方就是你不在的时候。</p>
+    <p class="lead">{{ t('ui.author.cadence_lead') }}</p>
     <div class="block" style="margin-top:22px">
       {{ svg_commit_bars }}
       <div class="caption">
-        最长一次中断 {{ persona.longest_gap_days }} 天。
-        最疯狂的一天是 {{ persona.busiest_day }}，做了 {{ persona.busiest_day_commits }} 次提交。
+        {{ t('ui.author.longest_gap', n=persona.longest_gap_days) }}
+        {{ t('ui.author.busiest', d=persona.busiest_day, n=persona.busiest_day_commits) }}
       </div>
     </div>
   </section>
 
   <section class="section" id="phases">
-    <div class="eyebrow">04 / 阶段</div>
+    <div class="eyebrow">{{ t('ui.author.s4.eyebrow') }}</div>
     <h2>{{ t('author.chapters') }}</h2>
-    <p class="lead">项目被切成这些阶段，每一段你参与了多少。</p>
+    <p class="lead">{{ t('ui.author.phases_lead') }}</p>
     <div class="block" style="margin-top:22px">
       {% for phase in chapters %}
       <div class="phase {{ 'absent' if phase.absent }}">
@@ -179,18 +179,18 @@
   </section>
 
   <section class="section" id="footprint">
-    <div class="eyebrow">05 / 战场</div>
+    <div class="eyebrow">{{ t('ui.author.s5.eyebrow') }}</div>
     <h2>{{ t('author.footprint') }}</h2>
     <div class="block" style="margin-top:22px">
       <div class="cols">
         <div>
-          <div class="coltitle">目录</div>
+          <div class="coltitle">{{ t('ui.author.dirs') }}</div>
           {% for item in persona.top_dirs %}
           <div class="frow"><code>{{ item.name }}</code><b>{{ item.churn | num }}</b></div>
           {% endfor %}
         </div>
         <div>
-          <div class="coltitle">文件</div>
+          <div class="coltitle">{{ t('ui.author.files') }}</div>
           {% for item in persona.top_files %}
           <div class="frow"><code>{{ item.path }}</code><b>{{ item.churn | num }}</b></div>
           {% endfor %}
@@ -200,7 +200,7 @@
   </section>
 
   <section class="section" id="kinds">
-    <div class="eyebrow">06 / 构成</div>
+    <div class="eyebrow">{{ t('ui.author.s6.eyebrow') }}</div>
     <h2>{{ t('author.kinds') }}</h2>
     <div class="block" style="margin-top:22px">
       {% for item in persona.kind_mix %}
@@ -215,7 +215,7 @@
 
   {% if peers %}
   <section class="section" id="peers">
-    <div class="eyebrow">07 / 人</div>
+    <div class="eyebrow">{{ t('ui.author.s7.eyebrow') }}</div>
     <h2>{{ t('author.peers') }}</h2>
     <p class="lead">{{ t('author.peers.note') }}</p>
     <div class="block" style="margin-top:22px">
@@ -223,7 +223,7 @@
       <div class="prow">
         <span class="pname" title="{{ peer.email }}">{{ peer.name }}</span>
         <span class="pbar"><span style="width:{{ peer.overlap }}%"></span></span>
-        <span class="pshare">{{ peer.shared_files }} 个共同文件</span>
+        <span class="pshare">{{ t('ui.author.shared_files', n=peer.shared_files) }}</span>
       </div>
       {% endfor %}
     </div>
@@ -231,7 +231,7 @@
   {% endif %}
 
   <section class="section" id="facts">
-    <div class="eyebrow">08 / 彩蛋</div>
+    <div class="eyebrow">{{ t('ui.author.s8.eyebrow') }}</div>
     <h2>{{ t('author.facts') }}</h2>
     <div class="facts" style="margin-top:22px">
       {% for fact in fun_facts %}
@@ -252,7 +252,7 @@
   {% endif %}
 
   <footer>
-    <span>git-chronicle {{ meta.version }} · 生成于 {{ meta.generated_at[:19].replace('T', ' ') }}</span>
+    <span>{{ t('ui.footer.generated', v=meta.version, d=meta.generated_at[:19].replace('T', ' ')) }}</span>
     <span>{{ meta.repo.name }} · {{ meta.repo.branch or '' }}</span>
   </footer>
 </main>
@@ -268,7 +268,7 @@
   btn.addEventListener('click', function () {
     var svg = document.getElementById('share-card');
     if (!svg) return;
-    note.textContent = '正在生成…';
+    note.textContent = '{{ t('ui.export.generating') }}';
 
     var clone = svg.cloneNode(true);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -282,7 +282,7 @@
 
     function attempt(index) {
       if (index >= candidates.length) {
-        note.textContent = '当前浏览器不允许导出，请直接截图';
+        note.textContent = '{{ t('ui.export.blocked') }}';
         return;
       }
       var image = new Image();
@@ -301,7 +301,7 @@
             link.href = URL.createObjectURL(blob);
             link.click();
             setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
-            note.textContent = '已保存 developer-card.png';
+            note.textContent = '{{ t('ui.export.done', name='developer-card.png') }}';
           }, 'image/png');
         } catch (err) {
           attempt(index + 1);

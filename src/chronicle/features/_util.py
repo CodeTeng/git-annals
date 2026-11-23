@@ -18,7 +18,6 @@ __all__ = [
     "month_key",
     "iter_month_keys",
     "iter_week_keys",
-    "WEEKDAY_ZH",
 ]
 
 
@@ -85,8 +84,6 @@ def iter_week_keys(start: date, end: date) -> list[str]:
         cursor = date.fromordinal(cursor.toordinal() + 7)
     return keys
 
-
-WEEKDAY_ZH = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 
 
 def as_date(value: datetime) -> date:

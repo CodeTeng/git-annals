@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from ..config import Settings
+from ..i18n import t
 from .client import ChatClient, LlmError
 from .prompt import build_payload, system_prompt, user_prompt
 from .schema import NarrativeError, validate
@@ -27,11 +28,10 @@ def enhance(report: dict, settings: Settings, progress: ProgressHook | None = No
         report["meta"]["ai"] = {"used": False, "reason": "disabled"}
         return report
 
+    lang = settings.lang
+
     if not settings.llm.ready():
-        report["warnings"].append(
-            "未找到 LLM API Key（CHRONICLE_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY），"
-            "已使用规则叙事。"
-        )
+        report["warnings"].append(t("ui.warn.no_key", lang))
         report["meta"]["ai"] = {"used": False, "reason": "no_api_key"}
         return report
 
@@ -41,7 +41,6 @@ def enhance(report: dict, settings: Settings, progress: ProgressHook | None = No
         report["meta"]["ai"] = {"used": False, "reason": "nothing_to_narrate"}
         return report
 
-    lang = settings.lang
     view = report.get("view", "project")
     payload = build_payload(report)
     system = system_prompt(lang, settings.tone, view)
@@ -81,7 +80,7 @@ def enhance(report: dict, settings: Settings, progress: ProgressHook | None = No
         }
         return report
 
-    report["warnings"].append(f"LLM 叙事失败，已回落规则叙事：{last_error[:160]}")
+    report["warnings"].append(t("ui.warn.llm_failed", lang, msg=last_error[:160]))
     report["meta"]["ai"] = {"used": False, "reason": "failed", "error": last_error[:300]}
     return report
 

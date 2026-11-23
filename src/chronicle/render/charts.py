@@ -14,6 +14,8 @@ from __future__ import annotations
 import html
 import math
 
+from ..i18n import t, weekdays
+
 __all__ = [
     "svg_timeline",
     "svg_commit_bars",
@@ -61,10 +63,12 @@ def _nice_max(value: float) -> float:
     return magnitude * 10
 
 
-def svg_timeline(points: list[dict], *, width: int = 880, height: int = 260) -> str:
+def svg_timeline(
+    points: list[dict], *, width: int = 880, height: int = 260, lang: str = "zh"
+) -> str:
     """增减行的镜像面积图：新增在上，删除在下，零线居中。"""
     if not points:
-        return '<p class="empty">没有可绘制的时间序列</p>'
+        return f'<p class="empty">{_e(t("chart.empty", lang))}</p>'
 
     n = len(points)
     pad_l, pad_r, pad_t, pad_b = 46, 14, 16, 26
@@ -99,7 +103,7 @@ def svg_timeline(points: list[dict], *, width: int = 880, height: int = 260) -> 
     parts = [
         f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" '
         f'xmlns="http://www.w3.org/2000/svg" font-family="{_FONT}">',
-        f'<title>代码增删趋势</title>',
+        f'<title>{_e(t("chart.timeline.title", lang))}</title>',
         # 网格
         f'<line x1="{pad_l}" y1="{pad_t}" x2="{width - pad_r}" y2="{pad_t}" stroke="{_LINE}" stroke-width="0.5"/>',
         f'<line x1="{pad_l}" y1="{zero:.1f}" x2="{width - pad_r}" y2="{zero:.1f}" stroke="{_INK}" stroke-width="0.8" opacity="0.25"/>',
@@ -127,8 +131,7 @@ def svg_timeline(points: list[dict], *, width: int = 880, height: int = 260) -> 
     # 悬停提示用原生 title，不写 JS
     for index, point in enumerate(points):
         parts.append(
-            f'<g><title>{_e(point["label"])}  ·  {point["commits"]} 次提交  '
-            f'{_signed(point["insertions"], "+")} / {_signed(point["deletions"], "−")}</title>'
+            f'<g><title>{_e(t("chart.tooltip.point", lang, label=point["label"], n=point["commits"], i=_signed(point["insertions"], "+"), d=_signed(point["deletions"], "−")))}</title>'
             f'<rect x="{x_of(index) - step / 2:.1f}" y="{pad_t}" width="{step:.1f}" '
             f'height="{plot_h}" fill="transparent"/></g>'
         )
@@ -137,7 +140,9 @@ def svg_timeline(points: list[dict], *, width: int = 880, height: int = 260) -> 
     return "".join(parts)
 
 
-def svg_commit_bars(points: list[dict], *, width: int = 880, height: int = 78) -> str:
+def svg_commit_bars(
+    points: list[dict], *, width: int = 880, height: int = 78, lang: str = "zh"
+) -> str:
     """提交频次柱状图。单独成图，避免和增删量挤在一个坐标系里互相干扰。"""
     if not points:
         return ""
@@ -152,7 +157,7 @@ def svg_commit_bars(points: list[dict], *, width: int = 880, height: int = 78) -
     parts = [
         f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" '
         f'xmlns="http://www.w3.org/2000/svg" font-family="{_FONT}">',
-        f'<title>每周提交频次</title>',
+        f'<title>{_e(t("chart.bars.title", lang))}</title>',
         f'<text x="{pad_l - 8}" y="{pad_t + 9}" text-anchor="end" font-size="11" fill="{_MUTED}">{peak}</text>',
         f'<text x="{pad_l - 8}" y="{height - pad_b}" text-anchor="end" font-size="11" fill="{_MUTED}">0</text>',
         f'<line x1="{pad_l}" y1="{height - pad_b}" x2="{width - pad_r}" y2="{height - pad_b}" stroke="{_LINE}" stroke-width="0.5"/>',
@@ -166,7 +171,7 @@ def svg_commit_bars(points: list[dict], *, width: int = 880, height: int = 78) -
         y = height - pad_b - bar_h
         opacity = 0.28 + 0.62 * (point["commits"] / peak)
         parts.append(
-            f'<g><title>{_e(point["label"])} · {point["commits"]} 次提交</title>'
+            f'<g><title>{_e(t("chart.tooltip.bar", lang, label=point["label"], n=point["commits"]))}</title>'
             f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{max(bar_h, 2.5):.1f}" '
             f'rx="1" fill="{_INK}" opacity="{opacity:.2f}"/></g>'
         )
@@ -174,10 +179,10 @@ def svg_commit_bars(points: list[dict], *, width: int = 880, height: int = 78) -
     return "".join(parts)
 
 
-def svg_heatmap(rhythm: dict, *, cell: int = 15, gap: int = 3) -> str:
+def svg_heatmap(rhythm: dict, *, cell: int = 15, gap: int = 3, lang: str = "zh") -> str:
     """7×24 作息热力图。周一在最上，凌晨在最左。"""
     matrix = rhythm.get("matrix") or [[0] * 24 for _ in range(7)]
-    labels = rhythm.get("weekday_labels") or ["一", "二", "三", "四", "五", "六", "日"]
+    labels = rhythm.get("weekday_labels") or list(weekdays(lang))
     peak = max((max(row) for row in matrix), default=0) or 1
 
     left, top_pad = 38, 18
@@ -187,7 +192,8 @@ def svg_heatmap(rhythm: dict, *, cell: int = 15, gap: int = 3) -> str:
     parts = [
         f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" '
         f'xmlns="http://www.w3.org/2000/svg" font-family="{_FONT}">',
-        f'<title>开发作息热力图</title><desc>按星期与小时统计的提交分布</desc>',
+        f'<title>{_e(t("chart.heatmap.title", lang))}</title>'
+        f'<desc>{_e(t("chart.heatmap.desc", lang))}</desc>',
     ]
 
     for hour in (0, 6, 12, 18, 23):
@@ -214,7 +220,7 @@ def svg_heatmap(rhythm: dict, *, cell: int = 15, gap: int = 3) -> str:
                 opacity = 0.035
                 fill = _INK
             parts.append(
-                f'<g><title>{_e(labels[dow])} {hour:02d}:00 · {value} 次提交</title>'
+                f'<g><title>{_e(t("chart.tooltip.cell", lang, dow=labels[dow], h=f"{hour:02d}", n=value))}</title>'
                 f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2.5" '
                 f'fill="{fill}" opacity="{opacity:.3f}"/></g>'
             )
@@ -308,13 +314,14 @@ def svg_share_card(report: dict, *, width: int = 720, height: int = 1080) -> str
     first = ((meta.get("range") or {}).get("first_commit") or "")[:10]
     last = ((meta.get("range") or {}).get("last_commit") or "")[:10]
     quote = report.get("quote") or ""
+    card_lang = meta.get("lang", "zh")
 
     pad = 64
     inner = width - pad * 2
     parts = [
         f'<svg id="share-card" viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
         f'xmlns="http://www.w3.org/2000/svg" font-family="{_FONT}">',
-        '<title>分享卡</title>',
+        f'<title>{_e(t("chart.card.title", meta.get("lang", "zh")))}</title>',
         f'<rect width="{width}" height="{height}" fill="#16151A"/>',
         f'<text x="{pad}" y="72" font-size="12.5" fill="#8C877E" letter-spacing="3">GIT CHRONICLE</text>',
         f'<text x="{width - pad}" y="72" text-anchor="end" font-size="12.5" fill="#8C877E">'
@@ -336,15 +343,16 @@ def svg_share_card(report: dict, *, width: int = 720, height: int = 1080) -> str
         )
 
     parts.append(
-        f'<text x="{pad}" y="386" font-size="10.5" fill="#6B6660" letter-spacing="1.5">每周增删</text>'
+        f'<text x="{pad}" y="386" font-size="10.5" fill="#6B6660" letter-spacing="1.5">'
+        f'{_e(t("chart.card.weekly", card_lang))}</text>'
     )
     parts.append(_mini_churn(points, pad, 400, inner, 150))
 
     stats = [
-        ("提交", _fmt(overview.get("commits", 0))),
-        ("新增行", _fmt(overview.get("insertions", 0))),
-        ("贡献者", str(overview.get("authors", 0))),
-        ("活跃天数", str(overview.get("active_days", 0))),
+        (t("ui.stat.commits", card_lang), _fmt(overview.get("commits", 0))),
+        (t("ui.stat.added_lines", card_lang), _fmt(overview.get("insertions", 0))),
+        (t("ui.stat.authors", card_lang), str(overview.get("authors", 0))),
+        (t("ui.stat.active_days", card_lang), str(overview.get("active_days", 0))),
     ]
     for index, (label, value) in enumerate(stats):
         col, row = index % 2, index // 2
@@ -365,7 +373,7 @@ def svg_share_card(report: dict, *, width: int = 720, height: int = 1080) -> str
         f'<text x="{pad}" y="{height - 60}" font-size="12" fill="#6B6660">'
         f'git-chronicle · {_e(meta.get("version", "0.1.0"))}</text>'
     )
-    zh = (meta.get("lang") or "zh") == "zh"
+    zh = card_lang == "zh"
     tail = (
         f"{overview.get('span_days', 0)} 天 · {overview.get('files_touched', 0)} 个文件"
         if zh
@@ -415,6 +423,7 @@ def svg_share_card_author(report: dict, *, width: int = 720, height: int = 1080)
     quote = report.get("quote") or ""
     name = persona.get("name") or "developer"
     tags = [tag["label"] for tag in persona.get("tags", [])][:3]
+    card_lang = meta.get("lang", "zh")
 
     pad = 64
     inner = width - pad * 2
@@ -424,7 +433,7 @@ def svg_share_card_author(report: dict, *, width: int = 720, height: int = 1080)
     parts = [
         f'<svg id="share-card" viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
         f'xmlns="http://www.w3.org/2000/svg" font-family="{_FONT}">',
-        "<title>开发者画像分享卡</title>",
+        f'<title>{_e(t("chart.card.title", meta.get("lang", "zh")))}</title>',
         f'<rect width="{width}" height="{height}" fill="#16151A"/>',
         f'<text x="{pad}" y="72" font-size="12.5" fill="#8C877E" letter-spacing="3">DEVELOPER PROFILE</text>',
         f'<text x="{width - pad}" y="72" text-anchor="end" font-size="12.5" fill="#8C877E">'
@@ -462,15 +471,16 @@ def svg_share_card_author(report: dict, *, width: int = 720, height: int = 1080)
 
     band = quote_y + 84
     parts.append(
-        f'<text x="{pad}" y="{band}" font-size="10.5" fill="#6B6660" letter-spacing="1.5">作息点阵 · 每格一小时</text>'
+        f'<text x="{pad}" y="{band}" font-size="10.5" fill="#6B6660" letter-spacing="1.5">'
+        f'{_e(t("chart.card.rhythm", meta.get("lang", "zh")))}</text>'
     )
     parts.append(_mini_heatmap(rhythm, pad, band + 14, inner, 146))
 
     stats = [
-        ("提交", _fmt(persona.get("commits", 0))),
-        ("占全仓库", f"{persona.get('share', 0)}%"),
-        ("新增行", _fmt(persona.get("insertions", 0))),
-        ("活跃天数", str(persona.get("active_days", 0))),
+        (t("ui.stat.commits", card_lang), _fmt(persona.get("commits", 0))),
+        (t("ui.stat.share_of_repo", card_lang), f"{persona.get('share', 0)}%"),
+        (t("ui.stat.added_lines", card_lang), _fmt(persona.get("insertions", 0))),
+        (t("ui.stat.active_days", card_lang), str(persona.get("active_days", 0))),
     ]
     grid_top = band + 232
     for index, (label, value) in enumerate(stats):
@@ -493,7 +503,7 @@ def svg_share_card_author(report: dict, *, width: int = 720, height: int = 1080)
         f'<text x="{pad}" y="{height - 60}" font-size="12" fill="#6B6660">'
         f"{_e(repo_name)} · git-chronicle {_e(meta.get('version', '0.1.0'))}</text>"
     )
-    zh = (meta.get("lang") or "zh") == "zh"
+    zh = card_lang == "zh"
     tail = (
         f"{persona.get('span_days', 0)} 天"
         if zh

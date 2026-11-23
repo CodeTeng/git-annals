@@ -88,9 +88,9 @@ def _project_html(report: dict) -> str:
         warnings=report.get("warnings") or [],
         events_by_chapter=_group_events(milestones, chapters),
         tag_label=_TAG_LABELS.get(lang, _TAG_LABELS["zh"]),
-        svg_timeline=Markup(charts.svg_timeline(points)),
-        svg_commit_bars=Markup(charts.svg_commit_bars(points)),
-        svg_heatmap=Markup(charts.svg_heatmap(report["rhythm"])),
+        svg_timeline=Markup(charts.svg_timeline(points, lang=lang)),
+        svg_commit_bars=Markup(charts.svg_commit_bars(points, lang=lang)),
+        svg_heatmap=Markup(charts.svg_heatmap(report["rhythm"], lang=lang)),
         svg_share_card=Markup(charts.svg_share_card(report)),
         t=partial(t, lang=lang),
     )
@@ -113,8 +113,8 @@ def _author_html(report: dict) -> str:
         fun_facts=report.get("fun_facts") or [],
         warnings=report.get("warnings") or [],
         kind_label=_kind_labels(lang),
-        svg_heatmap=Markup(charts.svg_heatmap(report["rhythm"])),
-        svg_commit_bars=Markup(charts.svg_commit_bars(points)),
+        svg_heatmap=Markup(charts.svg_heatmap(report["rhythm"], lang=lang)),
+        svg_commit_bars=Markup(charts.svg_commit_bars(points, lang=lang)),
         svg_share_card=Markup(charts.svg_share_card_author(report)),
         t=partial(t, lang=lang),
     )

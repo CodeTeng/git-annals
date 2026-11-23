@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ meta.repo.name }} · 项目演进编年史</title>
+<title>{{ meta.repo.name }} · {{ t('ui.project.title_suffix') }}</title>
 <style>
 {% include "_style.css.j2" %}
 
@@ -100,7 +100,7 @@
 
 <header class="hero">
   <div class="wrap">
-    <div class="eyebrow">项目演进编年史 · project chronicle</div>
+    <div class="eyebrow">{{ t('ui.project.eyebrow') }}</div>
     <h1>{{ meta.repo.name }}</h1>
     <p class="quote">{{ quote }}</p>
     <div class="meta">
@@ -109,21 +109,21 @@
       <span class="dot"></span>
       <span class="num">{{ meta.range.last_commit[:10] }}</span>
       <span class="dot"></span>
-      <span>{{ overview.span_days }} 天</span>
+      <span>{{ t('ui.days', n=overview.span_days) }}</span>
     </div>
 
     <dl class="stats">
-      <div class="stat"><dt>提交</dt><dd>{{ overview.commits | num }}</dd></div>
-      <div class="stat"><dt>新增</dt><dd style="color:#5DCAA5">{{ overview.insertions | signnum('+') }}</dd></div>
-      <div class="stat"><dt>删除</dt><dd style="color:#F0997B">{{ overview.deletions | signnum('−') }}</dd></div>
-      <div class="stat"><dt>贡献者</dt><dd>{{ overview.authors }}</dd></div>
-      <div class="stat"><dt>活跃天数</dt><dd>{{ overview.active_days }}<small>/{{ overview.span_days }}</small></dd></div>
-      <div class="stat"><dt>净增</dt><dd>{{ overview.net | num }}</dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.commits') }}</dt><dd>{{ overview.commits | num }}</dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.added') }}</dt><dd style="color:#5DCAA5">{{ overview.insertions | signnum('+') }}</dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.removed') }}</dt><dd style="color:#F0997B">{{ overview.deletions | signnum('−') }}</dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.authors') }}</dt><dd>{{ overview.authors }}</dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.active_days') }}</dt><dd>{{ overview.active_days }}<small>/{{ overview.span_days }}</small></dd></div>
+      <div class="stat"><dt>{{ t('ui.stat.net') }}</dt><dd>{{ overview.net | num }}</dd></div>
     </dl>
 
     <div class="hero-actions">
-      <button class="btn" id="export-card" type="button">导出分享卡 PNG</button>
-      <span class="btn-note" id="export-note">720 × 1080，适合直接发朋友圈</span>
+      <button class="btn" id="export-card" type="button">{{ t('ui.export.btn') }}</button>
+      <span class="btn-note" id="export-note">{{ t('ui.export.note') }}</span>
     </div>
   </div>
 </header>
@@ -131,9 +131,9 @@
 <main class="wrap">
 
   <section class="section" id="chapters">
-    <div class="eyebrow">01 / 编年史</div>
-    <h2>这段历史被切成 {{ chapters|length }} 个阶段</h2>
-    <p class="lead">阶段边界由提交频次与代码波动量的突变点决定，不是随手划的。同样的仓库跑两次，边界一样。</p>
+    <div class="eyebrow">{{ t('ui.project.s1.eyebrow') }}</div>
+    <h2>{{ t('ui.project.s1.title', n=chapters|length) }}</h2>
+    <p class="lead">{{ t('ui.project.s1.lead') }}</p>
 
     {% if chapters %}
     <div class="chapters" style="margin-top:28px">
@@ -154,20 +154,20 @@
                  aria-labelledby="tab-{{ ch.id }}" {{ 'hidden' if not loop.first }}>
           <div class="chapter-head">
             <h3>{{ ch.title }}</h3>
-            <span class="tag">{{ ch.archetype }}</span>
+            {% if ch.title | lower != ch.archetype %}<span class="tag">{{ ch.archetype }}</span>{% endif %}
           </div>
-          <div class="chapter-range">{{ ch.start }} → {{ ch.end }} · {{ ch.span_days }} 天</div>
+          <div class="chapter-range">{{ ch.start }} → {{ ch.end }} · {{ t('ui.days', n=ch.span_days) }}</div>
           <p class="chapter-narr">{{ ch.narrative }}</p>
           <div class="chapter-facts">
-            <div class="cf">提交<b>{{ ch.commits }}</b></div>
-            <div class="cf">新增<b style="color:var(--add)">{{ ch.insertions | signnum('+') }}</b></div>
-            <div class="cf">删除<b style="color:var(--del)">{{ ch.deletions | signnum('−') }}</b></div>
-            <div class="cf">节奏<b>{{ ch.commits_per_week }}/周</b></div>
-            <div class="cf">修复占比<b>{{ ch.fix_share }}%</b></div>
+            <div class="cf">{{ t('ui.stat.commits') }}<b>{{ ch.commits }}</b></div>
+            <div class="cf">{{ t('ui.stat.added') }}<b style="color:var(--add)">{{ ch.insertions | signnum('+') }}</b></div>
+            <div class="cf">{{ t('ui.stat.removed') }}<b style="color:var(--del)">{{ ch.deletions | signnum('−') }}</b></div>
+            <div class="cf">{{ t('ui.chapter.cadence') }}<b>{{ t('ui.chapter.cadence_value', v=ch.commits_per_week) }}</b></div>
+            <div class="cf">{{ t('ui.chapter.fix_share') }}<b>{{ ch.fix_share }}%</b></div>
           </div>
           {% if ch.top_dirs %}
           <div class="chapter-events">
-            <div style="font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:6px">主战场</div>
+            <div style="font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:6px">{{ t('ui.chapter.battleground') }}</div>
             <div class="dirs" style="border:0;padding:0;margin:0">
               {% for d in ch.top_dirs %}<span class="dchip">{{ d }}</span>{% endfor %}
             </div>
@@ -176,7 +176,7 @@
           {% set evs = events_by_chapter.get(ch.id, []) %}
           {% if evs %}
           <div class="chapter-events">
-            <div style="font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px">节点</div>
+            <div style="font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px">{{ t('ui.chapter.nodes') }}</div>
             {% for ev in evs %}
             <div class="ev">
               <span class="ev-date">{{ ev.date[5:] }}</span>
@@ -191,18 +191,18 @@
       </div>
     </div>
     {% else %}
-    <p class="empty" style="margin-top:20px">提交太少，无法切分章节。</p>
+    <p class="empty" style="margin-top:20px">{{ t('ui.chapters.empty') }}</p>
     {% endif %}
   </section>
 
   <section class="section" id="timeline">
-    <div class="eyebrow">02 / 节奏</div>
-    <h2>代码量波动</h2>
-    <p class="lead">上面是每一周的增删行，下面是提交频次。两条曲线不重合的地方，往往是「改得多但提交少」的大动作。</p>
+    <div class="eyebrow">{{ t('ui.project.s2.eyebrow') }}</div>
+    <h2>{{ t('ui.project.s2.title') }}</h2>
+    <p class="lead">{{ t('ui.project.s2.lead') }}</p>
     <div class="block" style="margin-top:22px">
       <div class="legend">
-        <span><i style="background:var(--add)"></i>新增行</span>
-        <span><i style="background:var(--del)"></i>删除行</span>
+        <span><i style="background:var(--add)"></i>{{ t('ui.legend.added') }}</span>
+        <span><i style="background:var(--del)"></i>{{ t('ui.legend.removed') }}</span>
       </div>
       {{ svg_timeline }}
       <div style="margin-top:6px">{{ svg_commit_bars }}</div>
@@ -210,26 +210,26 @@
   </section>
 
   <section class="section" id="rhythm">
-    <div class="eyebrow">03 / 作息</div>
-    <h2>你什么时候写代码</h2>
-    <p class="lead">按提交者本地时区统计，深色格子代表那个小时提交更密集。</p>
+    <div class="eyebrow">{{ t('ui.project.s3.eyebrow') }}</div>
+    <h2>{{ t('ui.project.s3.title') }}</h2>
+    <p class="lead">{{ t('ui.project.s3.lead') }}</p>
     <div class="block" style="margin-top:22px">
       <div class="rhythm-wrap">
         {{ svg_heatmap }}
         <div class="rhythm-stats">
-          <div>深夜（0–6 点）<b>{{ rhythm.night_ratio }}%</b></div>
-          <div>周末<b>{{ rhythm.weekend_ratio }}%</b></div>
-          <div>最活跃时段<b>{{ rhythm.peak.label }}</b></div>
-          <div>峰值小时<b>{{ rhythm.peak.count }} 次</b></div>
+          <div>{{ t('ui.rhythm.night') }}<b>{{ rhythm.night_ratio }}%</b></div>
+          <div>{{ t('ui.rhythm.weekend') }}<b>{{ rhythm.weekend_ratio }}%</b></div>
+          <div>{{ t('ui.rhythm.peak_window') }}<b>{{ rhythm.peak.label }}</b></div>
+          <div>{{ t('ui.rhythm.peak_hour') }}<b>{{ t('ui.rhythm.peak_hour_value', n=rhythm.peak.count) }}</b></div>
         </div>
       </div>
     </div>
   </section>
 
   <section class="section" id="churn">
-    <div class="eyebrow">04 / 风险</div>
-    <h2>文件修罗场</h2>
-    <p class="lead">不只看改得多不多，还看改动里混着多少修复、以及是不是只有一个人敢动它。</p>
+    <div class="eyebrow">{{ t('ui.project.s4.eyebrow') }}</div>
+    <h2>{{ t('ui.project.s4.title') }}</h2>
+    <p class="lead">{{ t('ui.project.s4.lead') }}</p>
     <div class="block" style="margin-top:22px">
       {% if churn.files %}
         {% for f in churn.files %}
@@ -239,10 +239,10 @@
             {% set parts = f.path.rsplit('/', 1) %}
             <div class="cpath">{% if parts|length > 1 %}<em>{{ parts[0] }}/</em>{{ parts[1] }}{% else %}{{ parts[0] }}{% endif %}</div>
             <div class="cmeta">
-              <span>{{ f.changes }} 次变更</span>
+              <span>{{ t('ui.churn.changes', n=f.changes) }}</span>
               <span>{{ f.insertions | signnum('+') }} / {{ f.deletions | signnum('−') }}</span>
-              <span>{{ f.authors }} 人碰过</span>
-              {% if f.fix_ratio > 0 %}<span>修复占比 {{ (f.fix_ratio * 100) | round | int }}%</span>{% endif %}
+              <span>{{ t('ui.churn.authors', n=f.authors) }}</span>
+              {% if f.fix_ratio > 0 %}<span>{{ t('ui.churn.fix_share', p=(f.fix_ratio * 100) | round | int) }}</span>{% endif %}
             </div>
             <div class="cbar"><span style="width:{{ (f.score / (churn.top_score or 1) * 100) | round(1) }}%"></span></div>
           </div>
@@ -263,9 +263,9 @@
   </section>
 
   <section class="section" id="langs">
-    <div class="eyebrow">05 / 构成</div>
-    <h2>代码构成</h2>
-    <p class="lead">按增删行数加权，不是文件个数。一个仓库里文档比代码多，本身也是个事实。</p>
+    <div class="eyebrow">{{ t('ui.project.s5.eyebrow') }}</div>
+    <h2>{{ t('ui.project.s5.title') }}</h2>
+    <p class="lead">{{ t('ui.project.s5.lead') }}</p>
     <div class="block" style="margin-top:22px">
       {% if languages.rows %}
       <div class="lbar">
@@ -276,24 +276,24 @@
         <span><i class="lc{{ loop.index0 % 6 }}"></i>{{ item.lang }} <span class="num">{{ item.share }}%</span></span>
         {% endfor %}
         {% if languages.rest.share > 0 %}
-        <span><i style="background:rgba(22,21,26,.15)"></i>其他 <span class="num">{{ languages.rest.share }}%</span></span>
+        <span><i style="background:rgba(22,21,26,.15)"></i>{{ t('ui.lang.other') }} <span class="num">{{ languages.rest.share }}%</span></span>
         {% endif %}
       </div>
       {% else %}
-      <p class="empty">没有可统计的文件类型。</p>
+      <p class="empty">{{ t('ui.langs.empty') }}</p>
       {% endif %}
     </div>
   </section>
 
   <section class="section" id="people">
-    <div class="eyebrow">06 / 人</div>
-    <h2>谁在写</h2>
+    <div class="eyebrow">{{ t('ui.project.s6.eyebrow') }}</div>
+    <h2>{{ t('ui.project.s6.title') }}</h2>
     {% if contributors.empty %}
       <p class="empty">{{ t('empty.no_commits') }}</p>
     {% elif contributors.single_author %}
-      <p class="lead">{{ t('empty.single_author') }} 全部 {{ contributors.total_commits }} 次提交来自一个人。</p>
+      <p class="lead">{{ t('empty.single_author') }} {{ t('ui.people.single', n=contributors.total_commits) }}</p>
     {% else %}
-    <p class="lead">作者身份按邮箱合并 —— 同一个人换过机器名也只算一个。</p>
+    <p class="lead">{{ t('ui.people.lead') }}</p>
     <div class="block" style="margin-top:22px">
       {% for p in contributors.rows %}
       <div class="prow">
@@ -307,9 +307,9 @@
   </section>
 
   <section class="section" id="facts">
-    <div class="eyebrow">07 / 彩蛋</div>
-    <h2>考古发现</h2>
-    <p class="lead">全部由规则从提交记录里挖出来，没有一句是编的。</p>
+    <div class="eyebrow">{{ t('ui.project.s7.eyebrow') }}</div>
+    <h2>{{ t('ui.project.s7.title') }}</h2>
+    <p class="lead">{{ t('ui.facts.lead') }}</p>
     <div class="facts" style="margin-top:22px">
       {% for fact in fun_facts %}
       <dl class="fact">
@@ -327,8 +327,8 @@
   {% endif %}
 
   <footer>
-    <span>git-chronicle {{ meta.version }} · 生成于 {{ meta.generated_at[:19].replace('T', ' ') }}</span>
-    <span>{{ overview.commits_code }} 次代码提交 · {{ overview.files_touched }} 个文件</span>
+    <span>{{ t('ui.footer.generated', v=meta.version, d=meta.generated_at[:19].replace('T', ' ')) }}</span>
+    <span>{{ t('ui.footer.project', c=overview.commits_code, f=overview.files_touched) }}</span>
   </footer>
 </main>
 
@@ -357,7 +357,7 @@
   btn.addEventListener('click', function () {
     var svg = document.getElementById('share-card');
     if (!svg) return;
-    note.textContent = '正在生成…';
+    note.textContent = '{{ t('ui.export.generating') }}';
 
     var clone = svg.cloneNode(true);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -371,7 +371,7 @@
 
     function attempt(index) {
       if (index >= candidates.length) {
-        note.textContent = '当前浏览器不允许导出，请直接截图';
+        note.textContent = '{{ t('ui.export.blocked') }}';
         return;
       }
       var image = new Image();
@@ -390,7 +390,7 @@
             link.href = URL.createObjectURL(blob);
             link.click();
             setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
-            note.textContent = '已保存 chronicle-card.png';
+            note.textContent = '{{ t('ui.export.done', name='chronicle-card.png') }}';
           }, 'image/png');
         } catch (err) {
           attempt(index + 1);

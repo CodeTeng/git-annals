@@ -1,6 +1,13 @@
 # Git Chronicle
 
+[![test](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml/badge.svg)](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml)
+[![PyPI](https://img.shields.io/pypi/v/git-chronicle?color=1D9E75)](https://pypi.org/project/git-chronicle/)
+[![Python](https://img.shields.io/pypi/pyversions/git-chronicle)](https://pypi.org/project/git-chronicle/)
+[![License](https://img.shields.io/badge/license-MIT-16151A)](LICENSE)
+
 把一段 Git 提交历史，变成一份能看的演进报告。
+
+**简体中文** ｜ [English](README.en.md)
 
 ![项目编年史](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-project.png)
 
@@ -194,8 +201,8 @@ src/chronicle/
 - 项目编年史 + 开发者画像两套报告，各自带分享卡 PNG 导出
 - 确定性统计层：概览、时序、作息热力、修罗场、语言、贡献者、里程碑、彩蛋
 - LLM 叙事（结构化输出 + 校验 + 单次自修正 + 无痛回落）
-- 身份多邮箱合并、脱敏、时间范围、分支与重命名开关
-- 32 项测试，CI 覆盖 Ubuntu/Windows × Python 3.10/3.13，另有一条「按用户方式装 wheel 再跑」的冒烟作业
+- 身份多邮箱合并、脱敏、中英双语报告、时间范围、分支与重命名开关
+- 38 项测试，CI 覆盖 Ubuntu/Windows × Python 3.10/3.13，另有一条「按用户方式装 wheel 再跑」的冒烟作业
 - 发布于 PyPI，`pipx install git-chronicle`
 
 规划中：
