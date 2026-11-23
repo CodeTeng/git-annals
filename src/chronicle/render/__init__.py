@@ -26,13 +26,13 @@ def _kind_labels(lang: str) -> dict[str, str]:
 
 _TAG_LABELS = {
     "zh": {
-        "hot": "高频",
+        "active": "仍在动",
         "brittle": "易碎",
         "silo": "单人维护",
         "volatile": "大起大落",
     },
     "en": {
-        "hot": "hot",
+        "active": "active",
         "brittle": "brittle",
         "silo": "silo",
         "volatile": "volatile",

@@ -197,12 +197,16 @@ def build_quote(commits: list[Commit], *, lang: str = "zh", tone: str = "tech") 
     days = (ordered[-1].authored_at.date() - ordered[0].authored_at.date()).days + 1
     insertions = sum(c.insertions for c in commits)
     deletions = sum(c.deletions for c in commits)
+    net = insertions - deletions
     key = "quote.roast" if tone == "roast" else "quote.tech"
+    # 措辞跟着正负走。这里曾经传的是 insertions+deletions 并写成「行代码」——
+    # 对 flask 会报 23 万行，而它十五年净增只有 3.4 万行。
+    net_key = "unit.net_add" if net >= 0 else "unit.net_cut"
     return t(
         key,
         lang,
         commits=_fmt_int(len(commits)),
-        lines=_fmt_int(insertions + deletions),
+        net_desc=t(net_key, lang, v=_fmt_int(abs(net))),
         days=days,
         insertions=_fmt_int(insertions),
         deletions=_fmt_int(deletions),

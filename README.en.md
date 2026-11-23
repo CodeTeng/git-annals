@@ -185,6 +185,10 @@ Masking emails alone is not enough — commit messages say what you're working o
 
 **Bulk imports get their own treatment.** Committing a dataset is a common accident: one `git add data/` contributes a million lines. Any single-file change over 20,000 lines is classified as a bulk import, excluded from line counts, and called out separately — "someone dropped a dataset into the repo" is itself a piece of history worth recording.
 
+**Every judgement is relative to the repository itself.** Phase classification, brittleness and volatility all use percentiles within the repo, not hard-coded constants. The baseline varies wildly: 33% of vite's commits are fixes, so `fix_ratio >= 0.35` tagged 14 of 15 files as brittle; a relative cut leaves only the genuinely unusual ones. `tests/test_invariants.py` enforces this behaviourally.
+
+**Every judgement is relative to the repository itself.** Phase classification, brittleness and volatility all use percentiles within the repo, not hard-coded constants. The baseline varies wildly: 33% of vite's commits are fixes, so `fix_ratio >= 0.35` tagged 14 of 15 files as brittle; a relative cut leaves only the genuinely unusual ones. `tests/test_invariants.py` enforces this behaviourally.
+
 **Hotspots are not ranked by frequency alone.** Changing a file most often doesn't make it the riskiest. The score is three factors: frequency (log-normalised), brittleness (how many of those changes were repairs), and bus-factor risk (is only one person willing to touch it — weighted by frequency). Docs and config are down-weighted, otherwise `.gitignore` lands in the top ten.
 
 **Identities merge by email, with no guessing.** People routinely have a work and a personal address. Merging two different people is worse than missing a duplicate, so merging is explicit only (`--author a,b`, or `aliases` in the config), with a hint when a share looks suspiciously low.
@@ -229,7 +233,7 @@ Done:
 - Deterministic statistics: overview, timeline, rhythm, hotspots, languages, contributors, milestones, facts
 - LLM narration with structured output, validation, one self-repair attempt, and painless fallback
 - Multi-email identity merging, redaction, bilingual reports, date ranges, branch and rename switches
-- 43 tests; CI covers Ubuntu/Windows × Python 3.10/3.13, plus a job that installs the built wheel and runs it like a user would
+- 95 tests (including shape-based invariant tests); CI covers Ubuntu/Windows × Python 3.10/3.13, plus a job that installs the built wheel and runs it like a user would
 
 Planned:
 

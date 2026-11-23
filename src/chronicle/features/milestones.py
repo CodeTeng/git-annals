@@ -13,6 +13,7 @@ from datetime import date, datetime
 
 from ..i18n import chapter_archetypes, t
 from ..models import Commit
+from ._baseline import quantile, ratio, share
 from ._util import mean, pct, round2, std
 
 __all__ = ["build_chapters", "detect_breakpoints", "build_events"]
@@ -117,29 +118,184 @@ def build_chapters(
             "flat": True,
         }
 
-    max_breaks = min(_MAX_CHAPTERS - 1, max(1, len(points) // 8))
-    breakpoints = detect_breakpoints(points, max_breaks)
+    baseline = _repo_baseline(commits)
+
+    # 长历史先在粗粒度上找断点：一万多周里用 6 周滑窗，等于拿放大镜看地图，
+    # 抓到的全是噪声。检测用粗粒度，渲染仍用原始 points。
+    coarse, mapper = _coarsen(points)
+    max_breaks = min(_MAX_CHAPTERS - 1, max(1, len(coarse) // 8))
+    raw_breaks = detect_breakpoints(coarse, max_breaks)
+    breakpoints = [
+        {"index": mapper[bp["index"]], "key": bp["key"], "date": bp["date"], "score": bp["score"]}
+        for bp in raw_breaks
+        if 0 <= bp["index"] < len(mapper)
+    ]
 
     bounds = [0] + [bp["index"] for bp in breakpoints] + [len(points)]
     segments = [(bounds[i], bounds[i + 1]) for i in range(len(bounds) - 1)]
 
-    chapters = []
+    # 相邻段落信号太像就合并。不为「凑满六章」硬切 ——
+    # 一个十五年匀速前进的仓库，正常答案是三章，不是六章。
+    #
+    # 还要防另一种失败：切出来的段落画风全一样。那说明这几刀没切出结构，
+    # 只是在一条直线上画刻度 —— 逐级放宽容差重切，直到出现差异或只剩三章。
+    chapters: list[dict] = []
+    for tolerance in (0.35, 0.55, 0.75, 1.0):
+        segments = _merge_homogeneous(segments, points, baseline, tolerance)
+        chapters = _build_chapters_from(segments, commits, points, lang, granularity, baseline)
+        # genesis 由位置决定（第一章必然是它），不参与「画风是否单调」的判断
+        variety = {chapter["archetype"] for chapter in chapters} - {"genesis"}
+        if len(variety) > 1 or len(chapters) <= 3:
+            break
+
+    # 同一种画风连续超过两章，就把后两章并掉。
+    # 「功能扩张期 Ⅲ」这种第 III 次重复，读者一眼就看出是模板在硬撑。
+    for _ in range(_MAX_CHAPTERS):
+        run_start = _long_run(chapters)
+        if run_start is None:
+            break
+        segments = (
+            segments[:run_start]
+            + [(segments[run_start][0], segments[run_start + 1][1])]
+            + segments[run_start + 2 :]
+        )
+        chapters = _build_chapters_from(segments, commits, points, lang, granularity, baseline)
+
+    merged = _merge_tiny(chapters)
+    _dedupe_titles(merged)
+
+    return {"chapters": merged, "breakpoints": breakpoints, "flat": len(merged) <= 1}
+
+
+def _long_run(chapters: list[dict], limit: int = 2) -> int | None:
+    """返回第一处「同一原型连续超过 limit 章」的起始下标。"""
+    for index in range(len(chapters) - limit):
+        window = chapters[index : index + limit + 1]
+        if len({chapter["archetype"] for chapter in window}) == 1:
+            return index + 1
+    return None
+
+
+def _build_chapters_from(
+    segments: list[tuple[int, int]],
+    commits: list[Commit],
+    points: list[dict],
+    lang: str,
+    granularity: str,
+    baseline: dict,
+) -> list[dict]:
+    chapters: list[dict] = []
     prev_end: date | None = None
     for order, (start_idx, end_idx) in enumerate(segments):
-        chunk = points[start_idx:end_idx]
         chapter = _build_chapter(
-            commits, chunk, order=order, lang=lang, granularity=granularity, prev_end=prev_end
+            commits,
+            points[start_idx:end_idx],
+            order=order,
+            lang=lang,
+            granularity=granularity,
+            prev_end=prev_end,
+            baseline=baseline,
         )
         if chapter is None:
             continue
         chapters.append(chapter)
         prev_end = date.fromisoformat(chapter["end"])
+    return chapters
 
-    # 切碎的小段落（少于 3 天或 0 提交）并回上一章，否则报告里全是残章
-    merged = _merge_tiny(chapters)
-    _dedupe_titles(merged)
 
-    return {"chapters": merged, "breakpoints": breakpoints, "flat": len(merged) <= 1}
+def _repo_baseline(commits: list[Commit]) -> dict:
+    """本仓库自己的常态。所有章节判定都相对它，不写死常数。"""
+    insertions = sum(c.insertions for c in commits)
+    deletions = sum(c.deletions for c in commits)
+    total = insertions + deletions
+    fixes = sum(1 for c in commits if c.kind in ("fix", "revert"))
+    return {
+        "del_ratio": share(deletions, total),
+        "fix_share": share(fixes, len(commits)) * 100,
+        "churn_per_commit": share(total, len(commits)),
+        "commits": len(commits),
+    }
+
+
+def _coarsen(points: list[dict], target: int = 120) -> tuple[list[dict], list[int]]:
+    """把过长的序列按比例聚合成 target 个桶，同时返回每个粗桶对应的原始下标。"""
+    n = len(points)
+    if n <= target * 1.5:
+        return points, list(range(n))
+
+    step = n / target
+    coarse: list[dict] = []
+    mapper: list[int] = []
+    for bucket in range(target):
+        start = int(bucket * step)
+        end = min(n, int((bucket + 1) * step))
+        if start >= end:
+            continue
+        window = points[start:end]
+        coarse.append(
+            {
+                "key": window[0]["key"],
+                "label": window[0]["label"],
+                "start": window[0]["start"],
+                "end": window[-1]["end"],
+                "commits": sum(p["commits"] for p in window),
+                "insertions": sum(p["insertions"] for p in window),
+                "deletions": sum(p["deletions"] for p in window),
+                "churn": sum(p["churn"] for p in window),
+            }
+        )
+        mapper.append(start)
+    return coarse, mapper
+
+
+def _segment_signals(points: list[dict], start: int, end: int) -> dict:
+    window = points[start:end]
+    if not window:
+        return {"per_week": 0.0, "churn_per_commit": 0.0, "del_ratio": 0.0, "days": 0}
+    commits = sum(p["commits"] for p in window)
+    churn = sum(p["churn"] for p in window)
+    deletions = sum(p["deletions"] for p in window)
+    days = (date.fromisoformat(window[-1]["end"]) - date.fromisoformat(window[0]["start"])).days + 1
+    return {
+        "per_week": commits / max(1.0, days / 7),
+        "churn_per_commit": share(churn, commits),
+        "del_ratio": share(deletions, churn),
+        "days": days,
+    }
+
+
+def _similar(a: dict, b: dict, tolerance: float = 0.35) -> bool:
+    """两个阶段的「画风」是否接近。三个信号都在容差内，就认为不该拆开。"""
+    for key in ("per_week", "churn_per_commit", "del_ratio"):
+        left, right = a[key], b[key]
+        scale = max(left, right, 1e-9)
+        if abs(left - right) / scale > tolerance:
+            return False
+    return True
+
+
+def _merge_homogeneous(
+    segments: list[tuple[int, int]],
+    points: list[dict],
+    baseline: dict,
+    tolerance: float = 0.35,
+) -> list[tuple[int, int]]:
+    """从最相似的一对开始合并，直到没有可合并的相邻段落。"""
+    segments = list(segments)
+    while len(segments) > 1:
+        signals = [_segment_signals(points, start, end) for start, end in segments]
+        best_index, best_gap = -1, None
+        for index in range(len(segments) - 1):
+            if not _similar(signals[index], signals[index + 1], tolerance):
+                continue
+            gap = abs(signals[index]["per_week"] - signals[index + 1]["per_week"])
+            if best_gap is None or gap < best_gap:
+                best_index, best_gap = index, gap
+        if best_index < 0:
+            break
+        merged = (segments[best_index][0], segments[best_index + 1][1])
+        segments[best_index : best_index + 2] = [merged]
+    return segments
 
 
 def _dedupe_titles(chapters: list[dict]) -> None:
@@ -167,6 +323,7 @@ def _build_chapter(
     lang: str,
     granularity: str,
     prev_end: date | None,
+    baseline: dict,
 ) -> dict | None:
     if not chunk:
         return None
@@ -187,6 +344,8 @@ def _build_chapter(
     del_ratio = (deletions / total_lines) if total_lines else 0.0
     gap_before = (date.fromisoformat(start) - prev_end).days if prev_end else 0
 
+    churn_per_commit = total_lines / len(members) if members else 0.0
+
     dirs = _top_dirs(members, limit=3)
     archetype = _classify(
         order=order,
@@ -195,6 +354,8 @@ def _build_chapter(
         fix_share=fix_share,
         gap_before=gap_before,
         span_days=span_days,
+        churn_per_commit=churn_per_commit,
+        baseline=baseline,
     )
 
     names = chapter_archetypes(lang)
@@ -224,6 +385,7 @@ def _build_chapter(
         "authors": len(authors),
         "commits_per_week": per_week,
         "fix_share": fix_share,
+        "churn_per_commit": round2(churn_per_commit),
         "delete_ratio": pct(deletions, total_lines),
         "gap_before_days": gap_before,
         "top_dirs": dirs,
@@ -239,6 +401,7 @@ def _build_chapter(
             commits=len(members),
             fix_share=fix_share,
             gap=gap_before,
+            cpc=f"{churn_per_commit:.0f}",
         ),
     }
 
@@ -251,23 +414,40 @@ def _classify(
     fix_share: float,
     gap_before: int,
     span_days: int,
+    churn_per_commit: float,
+    baseline: dict,
 ) -> str:
-    """用四个信号判断这一章的「画风」。
+    """判断这一章的「画风」。
 
-    顺序有讲究：空档 > 起点 > 低活跃 > 大删除 > 高频修复 > 高速扩张 > 稳态。
-    把「沉寂」排在「重构」前面，是因为四个月只提交六次的项目，主线是沉寂，
-    不是重构 —— 即使它确实删了很多行。
+    三个关键信号全部**相对本仓库常态**，不写死阈值：
+      相对删除比 = 本章删除占比 / 全仓库删除占比
+      相对修复比 = 本章 fix 占比 / 全仓库 fix 占比
+      相对单次体量 = 本章平均每次变更行数 / 全仓库平均
+
+    为什么必须相对：成熟仓库的增删天然接近 1:1。绝对阈值 `del_ratio >= 0.42`
+    会把 flask 十五年的正常开发全判成「重构」—— 实测六个章节里三个中招。
+
+    判定顺序有讲究：空档 > 起点 > 低活跃 > 大删除 > 高频修复 > 啃硬骨头 >
+    打磨 > 高速扩张 > 稳态。
     """
+    rel_del = ratio(del_ratio, baseline["del_ratio"])
+    rel_fix = ratio(fix_share, baseline["fix_share"])
+    rel_churn = ratio(churn_per_commit, baseline["churn_per_commit"])
+
     if gap_before >= _GAP_DAYS:
         return "renaissance" if per_week >= 1.5 else "silence"
     if order == 0:
         return "genesis"
     if per_week < 0.6 and span_days >= 28:
         return "dormant"
-    if del_ratio >= 0.42 and per_week >= 0.25:
+    if rel_del >= 1.4 and per_week >= 0.25:
         return "refactor"
-    if fix_share >= 35:
+    if rel_fix >= 1.6 and fix_share >= 15:
         return "firefight"
+    if rel_churn >= 1.8 and per_week < 2.5:
+        return "grind"
+    if rel_churn <= 0.55 and per_week >= 1.2:
+        return "polish"
     if per_week >= 2.5:
         return "expansion"
     return "steady"
@@ -284,6 +464,7 @@ def _narrative(
     commits: int,
     fix_share: float,
     gap: int,
+    cpc: str = "0",
 ) -> str:
     key = f"chapter.narrative.{archetype}"
     return t(
@@ -296,6 +477,7 @@ def _narrative(
         commits=commits,
         fix_share=f"{fix_share:.0f}%",
         gap=gap,
+        cpc=cpc,
     )
 
 
