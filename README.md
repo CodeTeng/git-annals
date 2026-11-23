@@ -1,6 +1,6 @@
 # Git Annals
 
-[![test](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml/badge.svg)](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml)
+[![test](https://github.com/CodeTeng/git-annals/actions/workflows/test.yml/badge.svg)](https://github.com/CodeTeng/git-annals/actions/workflows/test.yml)
 [![PyPI](https://img.shields.io/pypi/v/gitannals?color=1D9E75)](https://pypi.org/project/gitannals/)
 [![Python](https://img.shields.io/pypi/pyversions/gitannals)](https://pypi.org/project/gitannals/)
 [![License](https://img.shields.io/badge/license-MIT-16151A)](LICENSE)
@@ -9,7 +9,7 @@
 
 **简体中文** ｜ [English](README.en.md)
 
-![项目编年史](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-project.png)
+![项目编年史](https://raw.githubusercontent.com/CodeTeng/git-annals/main/docs/screenshot-project.png)
 
 一条命令，输出一个单文件 HTML。两个视角：
 
@@ -42,8 +42,8 @@ pip install gitannals
 开发时从源码装：
 
 ```bash
-git clone https://github.com/CodeTeng/git-chronicle
-cd git-chronicle && pip install -e ".[dev]"
+git clone https://github.com/CodeTeng/git-annals
+cd git-annals && pip install -e ".[dev]"
 ```
 
 只用 Python 3.10+ 和本机 `git`，不装数据库、不起服务。
@@ -91,11 +91,11 @@ gitannals . --anon --json annals.json
 
 **项目编年史** —— 阶段切分与叙事、代码量波动、作息热力图、文件修罗场、语言构成、贡献者分布、考古彩蛋，外加一张 720×1080 的分享卡。
 
-![代码量波动与作息热力图](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-charts.png)
+![代码量波动与作息热力图](https://raw.githubusercontent.com/CodeTeng/git-annals/main/docs/screenshot-charts.png)
 
 **开发者画像** —— 同一个人在这个仓库里的坐标、作息指纹、提交构成、阶段参与度、同路人。标签全部由规则判定，每条都能用报告里的数字反查。
 
-![开发者画像](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-author.png)
+![开发者画像](https://raw.githubusercontent.com/CodeTeng/git-annals/main/docs/screenshot-author.png)
 
 ## 配置文件
 

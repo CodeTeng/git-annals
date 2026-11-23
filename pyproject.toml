@@ -51,10 +51,10 @@ dev = ["pytest>=8"]
 gitannals = "chronicle.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/CodeTeng/git-chronicle"
-Repository = "https://github.com/CodeTeng/git-chronicle"
-Issues = "https://github.com/CodeTeng/git-chronicle/issues"
-Changelog = "https://github.com/CodeTeng/git-chronicle/releases"
+Homepage = "https://github.com/CodeTeng/git-annals"
+Repository = "https://github.com/CodeTeng/git-annals"
+Issues = "https://github.com/CodeTeng/git-annals/issues"
+Changelog = "https://github.com/CodeTeng/git-annals/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chronicle"]

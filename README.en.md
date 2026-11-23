@@ -1,6 +1,6 @@
 # Git Annals
 
-[![test](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml/badge.svg)](https://github.com/CodeTeng/git-chronicle/actions/workflows/test.yml)
+[![test](https://github.com/CodeTeng/git-annals/actions/workflows/test.yml/badge.svg)](https://github.com/CodeTeng/git-annals/actions/workflows/test.yml)
 [![PyPI](https://img.shields.io/pypi/v/gitannals?color=1D9E75)](https://pypi.org/project/gitannals/)
 [![Python](https://img.shields.io/pypi/pyversions/gitannals)](https://pypi.org/project/gitannals/)
 [![License](https://img.shields.io/badge/license-MIT-16151A)](LICENSE)
@@ -9,7 +9,7 @@ Turn a Git history into a report you'd actually read.
 
 [简体中文](README.md) ｜ **English**
 
-![Project chronicle](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-project.png)
+![Project chronicle](https://raw.githubusercontent.com/CodeTeng/git-annals/main/docs/screenshot-project.png)
 
 One command, one self-contained HTML file. Two views:
 
@@ -42,8 +42,8 @@ pip install gitannals
 From source:
 
 ```bash
-git clone https://github.com/CodeTeng/git-chronicle
-cd git-chronicle && pip install -e ".[dev]"
+git clone https://github.com/CodeTeng/git-annals
+cd git-annals && pip install -e ".[dev]"
 ```
 
 Python 3.10+ and your local `git`. No database, no server.
@@ -91,11 +91,11 @@ gitannals . --anon --json annals.json
 
 **Project chronicle** — phase segmentation with narration, code churn over time, working-hour heatmap, churn hotspots, language mix, contributor split, archaeology section, plus a 720×1080 share card.
 
-![Code churn and commit rhythm](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-charts.png)
+![Code churn and commit rhythm](https://raw.githubusercontent.com/CodeTeng/git-annals/main/docs/screenshot-charts.png)
 
 **Developer profile** — where one person sits in the repo, their hour-by-hour fingerprint, commit mix, participation per phase, and the people they worked alongside. Every tag is rule-derived and traceable back to a number in the report.
 
-![Developer profile](https://raw.githubusercontent.com/CodeTeng/git-chronicle/main/docs/screenshot-author.png)
+![Developer profile](https://raw.githubusercontent.com/CodeTeng/git-annals/main/docs/screenshot-author.png)
 
 ## Config file
 

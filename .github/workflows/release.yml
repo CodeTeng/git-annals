@@ -3,7 +3,7 @@ name: release
 # 打 v* 标签时构建并发布到 PyPI。
 # 用的是 Trusted Publishing（OIDC），不需要在仓库里存 API Token：
 #   PyPI → 项目 → Publishing → 添加 GitHub 发布者
-#   owner=CodeTeng  repo=git-chronicle  workflow=release.yml  environment=pypi
+#   owner=CodeTeng  repo=git-annals  workflow=release.yml  environment=pypi
 #
 # 也支持手动重跑（workflow_dispatch）：PyPI 的 trusted publisher 没配好时，
 # 配完直接重跑这个工作流即可，不用重新打标签。
