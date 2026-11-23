@@ -1,6 +1,6 @@
 """配置合并。
 
-优先级：内置默认 < 仓库根的 `.chronicle.toml` < 环境变量 < 命令行参数。
+优先级：内置默认 < 仓库根的 `.annals.toml` < 环境变量 < 命令行参数。
 最后一条最重要 —— 显式传进来的参数永远该赢。
 """
 
@@ -51,10 +51,17 @@ class Settings:
 
 
 def _read_toml(path: Path) -> dict[str, Any]:
+    # 3.11+ 用标准库；3.10 没有 tomllib，回落到 backport（pyproject 里按
+    # python_version < 3.11 条件安装）。曾经这里直接 return {} —— 3.10 用户的
+    # .annals.toml 会被整份忽略，lang / tone / ignore / aliases 全部失效，
+    # 而且没有任何提示，看起来就像配置写错了。
     try:
         import tomllib  # Python 3.11+
-    except ModuleNotFoundError:  # pragma: no cover - 3.10 只损失配置文件能力
-        return {}
+    except ModuleNotFoundError:  # pragma: no cover - 由 3.10 的 CI job 覆盖
+        try:
+            import tomli as tomllib  # type: ignore[no-redef]
+        except ModuleNotFoundError:  # pragma: no cover - 依赖没装时才走到
+            return {}
     try:
         with path.open("rb") as handle:
             return tomllib.load(handle)

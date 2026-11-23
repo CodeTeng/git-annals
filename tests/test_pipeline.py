@@ -409,6 +409,34 @@ def test_lookup_error_is_one_class() -> None:
     assert a.AuthorLookupError is p.AuthorLookupError
 
 
+def test_toml_fallback_without_tomllib(tmp_path: Path, monkeypatch) -> None:
+    """Python 3.10 没有标准库 tomllib，必须回落到 tomli，不能把配置整份丢掉。
+
+    这条在 3.13 上用假的 ModuleNotFoundError 模拟 3.10，CI 的 3.10 job 则是真的。
+    """
+    import builtins
+
+    from chronicle import config
+
+    root = tmp_path / "cfg"
+    root.mkdir()
+    (root / ".annals.toml").write_text(
+        '[report]\nlang = "en"\ntone = "roast"\n', encoding="utf-8"
+    )
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "tomllib":
+            raise ModuleNotFoundError("No module named 'tomllib'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    settings = config.load_settings(root, overrides={})
+    assert settings.lang == "en", "3.10 上配置文件曾被整份忽略"
+    assert settings.tone == "roast"
+
+
 # ---------------------------------------------------------------- 0.1.6 低优先级项
 
 
