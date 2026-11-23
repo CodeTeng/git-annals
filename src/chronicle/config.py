@@ -17,8 +17,13 @@ CONFIG_FILENAME = ".annals.toml"
 
 DEFAULT_BASE_URL = "https://api.deepseek.com/v1"
 DEFAULT_MODEL = "deepseek-chat"
-# 按顺序找，先找到的先用
-_API_KEY_ENVS = ("CHRONICLE_API_KEY", "DEEPSEEK_API_KEY", "OPENAI_API_KEY")
+# 按顺序找，先找到的先用。CHRONICLE_API_KEY 是改名前的名字，留着不让人突然失效。
+_API_KEY_ENVS = (
+    "ANNALS_API_KEY",
+    "CHRONICLE_API_KEY",
+    "DEEPSEEK_API_KEY",
+    "OPENAI_API_KEY",
+)
 
 
 @dataclass(slots=True)

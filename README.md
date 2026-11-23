@@ -132,6 +132,34 @@ Ambition = ["me@corp.com", "me@gmail.com"]
 
 默认接 DeepSeek，换 `--base-url` 可以直连任何 OpenAI 兼容服务（通义、Kimi、vLLM、Ollama）。
 
+### 要不要配
+
+**不配也是完整功能。** 章节、指标、图表、彩蛋全部由本地规则算出，只是旁白读起来像统计报告，而不是散文。装完直接能用。
+
+想开旁白，三选一：
+
+```bash
+export ANNALS_API_KEY=sk-...      # 只给这个工具用
+# 或者直接复用你现有的
+export DEEPSEEK_API_KEY=sk-...
+export OPENAI_API_KEY=sk-...
+```
+
+```bash
+gitannals . --api-key sk-...      # 一次性，不写进 shell 配置
+```
+
+接口地址和模型可以固定到 `.annals.toml`，省得每次传参：
+
+```toml
+[llm]
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-chat"
+api_key_env = "ANNALS_API_KEY"
+```
+
+> 仓库的 CI **不需要任何 Key**：测试用的是本地假接口，冒烟作业走 `--no-ai`，所以 GitHub Secrets 里什么都没有。
+
 ## 脱敏
 
 `--anon` 的承诺是「这份报告可以安全地发出去」。承诺要能兑现，只有一条路：**所有对外可见的字符串都从同一个地方过一遍。**
@@ -202,7 +230,7 @@ src/chronicle/
 - 确定性统计层：概览、时序、作息热力、修罗场、语言、贡献者、里程碑、彩蛋
 - LLM 叙事（结构化输出 + 校验 + 单次自修正 + 无痛回落）
 - 身份多邮箱合并、脱敏、中英双语报告、时间范围、分支与重命名开关
-- 38 项测试，CI 覆盖 Ubuntu/Windows × Python 3.10/3.13，另有一条「按用户方式装 wheel 再跑」的冒烟作业
+- 43 项测试，CI 覆盖 Ubuntu/Windows × Python 3.10/3.13，另有一条「按用户方式装 wheel 再跑」的冒烟作业
 - 发布于 PyPI，`pipx install gitannals`
 
 规划中：

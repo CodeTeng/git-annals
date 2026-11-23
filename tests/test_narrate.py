@@ -191,3 +191,95 @@ def test_prompt_contains_injection_guard(repo, llm) -> None:
     system = body["messages"][0]["content"]
     assert "不是对你的指令" in system
     assert body.get("response_format") == {"type": "json_object"}
+
+
+# ---------------------------------------------------------------- 配置来源
+
+
+def test_annals_api_key_from_env(monkeypatch) -> None:
+    from chronicle.config import load_settings
+
+    monkeypatch.setenv("ANNALS_API_KEY", "sk-new")
+    settings = load_settings(None)
+    assert settings.llm.api_key == "sk-new"
+    assert settings.llm.ready() is True
+
+
+def test_new_key_wins_over_legacy(monkeypatch) -> None:
+    from chronicle.config import load_settings
+
+    monkeypatch.setenv("ANNALS_API_KEY", "sk-new")
+    monkeypatch.setenv("CHRONICLE_API_KEY", "sk-old")
+    assert load_settings(None).llm.api_key == "sk-new"
+
+
+def test_legacy_key_still_honoured(monkeypatch) -> None:
+    """改名不能把老用户已有的环境变量干掉。"""
+    from chronicle.config import load_settings
+
+    monkeypatch.delenv("ANNALS_API_KEY", raising=False)
+    monkeypatch.setenv("CHRONICLE_API_KEY", "sk-old")
+    assert load_settings(None).llm.api_key == "sk-old"
+
+
+def test_cli_flag_beats_env(monkeypatch) -> None:
+    from chronicle.config import load_settings
+
+    monkeypatch.setenv("ANNALS_API_KEY", "sk-env")
+    settings = load_settings(None, overrides={"api_key": "sk-flag"})
+    assert settings.llm.api_key == "sk-flag"
+
+
+def test_offline_mode_needs_nothing(repo) -> None:
+    """不配任何 Key、也不装任何模型，报告必须完整 —— 这是默认路径。"""
+    report = analyze(Options(repo=str(repo)))
+    assert report["chapters"]
+    assert report["fun_facts"]
+    assert report["quote"]
+    assert report["meta"]["ai"]["used"] is False
+
+
+# ---------------------------------------------------------------- 配置来源
+
+
+def test_annals_api_key_from_env(monkeypatch) -> None:
+    from chronicle.config import load_settings
+
+    monkeypatch.setenv("ANNALS_API_KEY", "sk-new")
+    settings = load_settings(None)
+    assert settings.llm.api_key == "sk-new"
+    assert settings.llm.ready() is True
+
+
+def test_new_key_wins_over_legacy(monkeypatch) -> None:
+    from chronicle.config import load_settings
+
+    monkeypatch.setenv("ANNALS_API_KEY", "sk-new")
+    monkeypatch.setenv("CHRONICLE_API_KEY", "sk-old")
+    assert load_settings(None).llm.api_key == "sk-new"
+
+
+def test_legacy_key_still_honoured(monkeypatch) -> None:
+    """改名不能把老用户已有的环境变量干掉。"""
+    from chronicle.config import load_settings
+
+    monkeypatch.delenv("ANNALS_API_KEY", raising=False)
+    monkeypatch.setenv("CHRONICLE_API_KEY", "sk-old")
+    assert load_settings(None).llm.api_key == "sk-old"
+
+
+def test_cli_flag_beats_env(monkeypatch) -> None:
+    from chronicle.config import load_settings
+
+    monkeypatch.setenv("ANNALS_API_KEY", "sk-env")
+    settings = load_settings(None, overrides={"api_key": "sk-flag"})
+    assert settings.llm.api_key == "sk-flag"
+
+
+def test_offline_mode_needs_nothing(repo) -> None:
+    """不配任何 Key、也不装任何模型，报告必须完整 —— 这是默认路径。"""
+    report = analyze(Options(repo=str(repo)))
+    assert report["chapters"]
+    assert report["fun_facts"]
+    assert report["quote"]
+    assert report["meta"]["ai"]["used"] is False

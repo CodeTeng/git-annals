@@ -132,6 +132,34 @@ Any failure — no key, network down, non-JSON output, out-of-range fields — f
 
 Defaults to DeepSeek; `--base-url` points it at any OpenAI-compatible endpoint (vLLM, Ollama, anything).
 
+### Do I need a key?
+
+**No — the default is fully functional.** Phases, metrics, charts and trivia are all computed by local rules; without a key only the prose reads like a stats report instead of an essay. Install and run.
+
+To turn narration on, pick one:
+
+```bash
+export ANNALS_API_KEY=sk-...      # just for this tool
+# or reuse one you already have
+export DEEPSEEK_API_KEY=sk-...
+export OPENAI_API_KEY=sk-...
+```
+
+```bash
+gitannals . --api-key sk-...      # one-off, don't pollute your shell
+```
+
+Pin the endpoint and model in `.annals.toml` so you don't pass flags every time:
+
+```toml
+[llm]
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-chat"
+api_key_env = "ANNALS_API_KEY"
+```
+
+> CI needs **no key at all**: tests talk to a local fake endpoint and the smoke job runs with `--no-ai`. There is nothing in GitHub Secrets.
+
 ## Redaction
 
 `--anon` promises "this report is safe to send". The only way to keep that promise is to **route every externally visible string through one place**.
@@ -201,7 +229,7 @@ Done:
 - Deterministic statistics: overview, timeline, rhythm, hotspots, languages, contributors, milestones, facts
 - LLM narration with structured output, validation, one self-repair attempt, and painless fallback
 - Multi-email identity merging, redaction, bilingual reports, date ranges, branch and rename switches
-- 38 tests; CI covers Ubuntu/Windows × Python 3.10/3.13, plus a job that installs the built wheel and runs it like a user would
+- 43 tests; CI covers Ubuntu/Windows × Python 3.10/3.13, plus a job that installs the built wheel and runs it like a user would
 
 Planned:
 

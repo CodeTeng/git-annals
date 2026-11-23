@@ -193,7 +193,7 @@ def _print_summary(report: dict, is_author: bool) -> None:
         )
     elif ai.get("reason") == "no_api_key" and not (report["meta"].get("options") or {}).get("no_ai"):
         console.print(
-            "\n  [dim]未找到 API Key，使用规则叙事。设置 CHRONICLE_API_KEY 可启用 LLM 旁白。[/dim]"
+            "\n  [dim]未配 LLM，使用规则叙事（功能完整）。想启用旁白：export ANNALS_API_KEY=sk-...[/dim]"
         )
 
     for warning in report.get("warnings") or []:
