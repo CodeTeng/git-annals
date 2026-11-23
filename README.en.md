@@ -29,7 +29,7 @@ gitannals /path/to/repo --view author --open
 
 What you actually want to know: **what happened here, where does it stand now, and what was my part in it.**
 
-Git Chronicle reorganises the metadata along three axes — time, structure, people — cuts it into phases, and tells it with charts.
+Git Annals reorganises the metadata along three axes — time, structure, people — cuts it into phases, and tells it with charts.
 
 ## Install
 
