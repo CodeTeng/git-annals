@@ -51,7 +51,9 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    # 只有真的发上 PyPI 了才建 Release，否则会留下一个指向空地方的公告
+    # 两个条件：真的发上 PyPI 了，而且确实是由标签触发的。
+    # 手动重跑没有标签上下文，硬建 Release 会挂 —— 那种情况只补发 PyPI。
+    if: startsWith(github.ref, 'refs/tags/')
     needs: [build, publish]
     runs-on: ubuntu-latest
     steps:
