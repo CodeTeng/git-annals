@@ -187,7 +187,6 @@ Masking emails alone is not enough — commit messages say what you're working o
 
 **Every judgement is relative to the repository itself.** Phase classification, brittleness and volatility all use percentiles within the repo, not hard-coded constants. The baseline varies wildly: 33% of vite's commits are fixes, so `fix_ratio >= 0.35` tagged 14 of 15 files as brittle; a relative cut leaves only the genuinely unusual ones. `tests/test_invariants.py` enforces this behaviourally.
 
-**Every judgement is relative to the repository itself.** Phase classification, brittleness and volatility all use percentiles within the repo, not hard-coded constants. The baseline varies wildly: 33% of vite's commits are fixes, so `fix_ratio >= 0.35` tagged 14 of 15 files as brittle; a relative cut leaves only the genuinely unusual ones. `tests/test_invariants.py` enforces this behaviourally.
 
 **Hotspots are not ranked by frequency alone.** Changing a file most often doesn't make it the riskiest. The score is three factors: frequency (log-normalised), brittleness (how many of those changes were repairs), and bus-factor risk (is only one person willing to touch it — weighted by frequency). Docs and config are down-weighted, otherwise `.gitignore` lands in the top ten.
 
