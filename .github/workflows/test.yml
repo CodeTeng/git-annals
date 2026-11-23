@@ -34,7 +34,19 @@ jobs:
           git config --global user.email "ci@example.com"
 
       - name: 测试
-        run: pytest -q
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest tests -q --tb=short 2>&1 | tee pytest.log
+
+      # 失败时把断言行写成 annotation —— 日志要 repo admin 才能通过 API 取，
+      # annotation 是公开可读的，出问题时不至于只能靠猜。
+      - name: 失败摘要
+        if: failure()
+        shell: bash
+        run: |
+          detail=$(grep -E '^(FAILED|ERROR|E )' pytest.log | tail -12 | tr '\n' '|')
+          echo "::error title=pytest 失败::${detail:0:3500}"
 
   smoke:
     name: 安装产物冒烟
