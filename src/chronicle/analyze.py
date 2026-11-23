@@ -33,6 +33,7 @@ from .features import (
 )
 from .gitio import parse, runner
 from .i18n import t
+from .identity import find_name_collisions, name_signature
 from .narrate import enhance
 from .redact import redact_report
 
@@ -167,7 +168,7 @@ def _project_report(
     report["fun_facts"] = fun_facts.build_facts(commits, lang=options.lang)
     report["quote"] = fun_facts.build_quote(commits, lang=options.lang, tone=options.tone)
 
-    _append_data_warnings(report, options)
+    _append_data_warnings(report, options, commits)
     return report
 
 
@@ -254,14 +255,14 @@ def _author_report(
             t("ui.warn.low_share", options.lang, share=report["persona"]["share"])
         )
 
-    _append_data_warnings(report, options)
+    _append_data_warnings(report, options, commits)
     return report
 
 
 # ------------------------------------------------------------------ 公共
 
 
-def _append_data_warnings(report: dict, options: Options) -> None:
+def _append_data_warnings(report: dict, options: Options, commits: list) -> None:
     lang = options.lang
     block = report.get("overview")
     if block:
@@ -274,6 +275,82 @@ def _append_data_warnings(report: dict, options: Options) -> None:
             )
         if block["commits"] < 20:
             report["warnings"].append(t("ui.warn.few_commits", lang, n=20))
+
+    _append_identity_warnings(report, options, commits)
+
+
+def _append_identity_warnings(report: dict, options: Options, commits: list) -> None:
+    """两个「数据本身就错」的风险，靠用户自己看是发现不了的。
+
+    1. 同名多邮箱 —— 画像只统计到一半，数字看着正常，其实错了。
+    2. 未来时间戳 —— 跨度与趋势全部失真。
+    """
+    lang = options.lang
+
+    now = datetime.now(timezone.utc)
+    future = [c for c in commits if c.authored_at > now]
+    if future:
+        furthest = max(c.authored_at for c in future)
+        report["warnings"].append(
+            t("ui.warn.future", lang, n=len(future), date=furthest.date().isoformat())
+        )
+
+    collisions = find_name_collisions(commits)
+    report["identity_collisions"] = collisions
+
+    # 个人视角下不重复报全量，只提醒「你只分析了其中一个邮箱」
+    if report.get("view") == "author":
+        persona = report.get("persona") or {}
+        signature = name_signature(persona.get("name", ""))
+        mine = persona.get("email", "")
+        for collision in collisions:
+            if name_signature(collision["name"]) != signature:
+                continue
+            # 已经通过 --author a,b 或配置合并过：提交数覆盖了整组，不必再提醒
+            if persona.get("commits", 0) >= collision["commits"] * 0.99:
+                continue
+            others = [e for e in collision["emails"] if e != mine]
+            if not others:
+                continue
+            if options.anon:
+                report["warnings"].append(
+                    t("ui.warn.author_partial_anon", lang, name=persona.get("name", ""))
+                )
+            else:
+                report["warnings"].append(
+                    t(
+                        "ui.warn.author_partial",
+                        lang,
+                        name=persona.get("name", ""),
+                        other="、".join(others),
+                        list=",".join(collision["emails"]),
+                    )
+                )
+            break
+        return
+
+    for collision in collisions:
+        if options.anon:
+            # 脱敏报告里邮箱已经打码，再给一条 --author 命令等于让用户去执行乱码
+            report["warnings"].append(
+                t(
+                    "ui.warn.name_collision_anon",
+                    lang,
+                    name=collision["name"],
+                    n=len(collision["emails"]),
+                )
+            )
+            continue
+        report["warnings"].append(
+            t(
+                "ui.warn.name_collision",
+                lang,
+                name=collision["name"],
+                n=len(collision["emails"]),
+                emails=" / ".join(collision["emails"]),
+                list=",".join(collision["emails"]),
+            )
+        )
 
 
 def _build_meta(

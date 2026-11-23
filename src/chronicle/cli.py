@@ -22,6 +22,7 @@ from .analyze import AuthorLookupError, Options, analyze
 from .config import load_settings
 from .gitio import runner
 from .gitio.runner import GitError
+from .i18n import t
 
 app = typer.Typer(
     add_completion=False,
@@ -88,7 +89,7 @@ def main(
     try:
         root = runner.resolve_repo(path)
     except GitError as exc:
-        console.print(f"[red]✗ {exc}[/red]")
+        _report_git_error(exc, lang)
         raise typer.Exit(1) from exc
 
     settings = load_settings(
@@ -136,7 +137,7 @@ def main(
             console.print(f"   [dim]{candidate}[/dim]")
         raise typer.Exit(2) from exc
     except GitError as exc:
-        console.print(f"[red]✗ {exc}[/red]")
+        _report_git_error(exc, lang)
         raise typer.Exit(1) from exc
 
     is_author = view == "author"
@@ -161,6 +162,20 @@ def main(
 
     if html_written and open_browser:
         webbrowser.open(target.resolve().as_uri())
+
+
+_GIT_ERROR_KEYS = {
+    "empty_repo": "ui.err.no_commits_hint",
+}
+
+
+def _report_git_error(exc: GitError, lang: str) -> None:
+    """已知情形给人话，未知情形保留原始 stderr —— 排查时那才是唯一线索。"""
+    key = _GIT_ERROR_KEYS.get(getattr(exc, "code", None) or "")
+    if key:
+        console.print(f"[yellow]⚠[/yellow] {t(key, lang)}")
+    else:
+        console.print(f"[red]✗ {exc}[/red]")
 
 
 def _try_render(report: dict, output: Path, quiet: bool) -> bool:

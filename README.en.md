@@ -232,7 +232,7 @@ Done:
 - Deterministic statistics: overview, timeline, rhythm, hotspots, languages, contributors, milestones, facts
 - LLM narration with structured output, validation, one self-repair attempt, and painless fallback
 - Multi-email identity merging, redaction, bilingual reports, date ranges, branch and rename switches
-- 95 tests (including shape-based invariant tests); CI covers Ubuntu/Windows × Python 3.10/3.13, plus a job that installs the built wheel and runs it like a user would
+- 112 tests (including shape-based invariant tests); CI covers Ubuntu/Windows × Python 3.10/3.13, plus a job that installs the built wheel and runs it like a user would
 
 Planned:
 

@@ -196,3 +196,67 @@ def test_no_three_consecutive_same_archetype(shaped: dict) -> None:
         assert len(archetypes) > 1, (
             f"[{shaped['shape']}] 连续三章同型：{[c['title'] for c in window]}"
         )
+
+
+def test_single_chapter_is_not_called_steady(shaped: dict) -> None:
+    """只有一个章节的仓库不该叫「稳态迭代期」—— 它可能刚起步三天。"""
+    report = shaped["report"]
+    chapters = report["chapters"]
+    if len(chapters) != 1:
+        pytest.skip("多章节仓库不适用")
+    only = chapters[0]
+    if only["span_days"] <= 180:
+        assert only["archetype"] == "genesis", (
+            f"[{shaped['shape']}] {only['span_days']} 天的历史被判成 {only['title']}"
+        )
+
+
+def test_no_chapter_dominates_the_whole_history(shaped: dict) -> None:
+    """只拦「一章到底」，不要求平均切分。
+
+    阈值定在 90%，因为跨度不均本身不是错误：匀速仓库切成三段必然是
+    「短-长-短」，那个长段里根本没有突变，硬切只会造出假阶段。
+    实测 rustlings 有 57% 的章节、真实匀速仓库能到 84%，都属正常。
+    这条守的是「切分彻底失效」这条底线。
+    """
+    chapters = shaped["report"]["chapters"]
+    span = sum(c["span_days"] for c in chapters)
+    if not span or len(chapters) < 2:
+        return
+    worst = max(c["span_days"] for c in chapters)
+    assert worst / span <= 0.90, (
+        f"[{shaped['shape']}] 最长一章占 {round(worst / span * 100)}%："
+        f"{[(c['title'], c['span_days']) for c in chapters]}"
+    )
+
+
+def test_single_chapter_is_not_called_steady(shaped: dict) -> None:
+    """只有一个章节的仓库不该叫「稳态迭代期」—— 它可能刚起步三天。"""
+    report = shaped["report"]
+    chapters = report["chapters"]
+    if len(chapters) != 1:
+        pytest.skip("多章节仓库不适用")
+    only = chapters[0]
+    if only["span_days"] <= 180:
+        assert only["archetype"] == "genesis", (
+            f"[{shaped['shape']}] {only['span_days']} 天的历史被判成 {only['title']}"
+        )
+
+
+def test_no_chapter_dominates_the_whole_history(shaped: dict) -> None:
+    """只拦「一章到底」，不要求平均切分。
+
+    阈值定在 90%，因为跨度不均本身不是错误：匀速仓库切成三段必然是
+    「短-长-短」，那个长段里根本没有突变，硬切只会造出假阶段。
+    实测 rustlings 有 57% 的章节、真实匀速仓库能到 84%，都属正常。
+    这条守的是「切分彻底失效」这条底线。
+    """
+    chapters = shaped["report"]["chapters"]
+    span = sum(c["span_days"] for c in chapters)
+    if not span or len(chapters) < 2:
+        return
+    worst = max(c["span_days"] for c in chapters)
+    assert worst / span <= 0.90, (
+        f"[{shaped['shape']}] 最长一章占 {round(worst / span * 100)}%："
+        f"{[(c['title'], c['span_days']) for c in chapters]}"
+    )

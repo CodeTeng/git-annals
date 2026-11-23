@@ -19,7 +19,18 @@ from ._util import mean, pct, round2, std
 __all__ = ["build_chapters", "detect_breakpoints", "build_events"]
 
 _MIN_SEGMENT = 3          # 每章至少 3 个时间桶
-_MAX_CHAPTERS = 6
+# 「时间型」章节按停顿的长度定义，不是按节奏定义。
+# 「隔了三年才回来」这种章节越长越说明问题，切它没有意义；
+# 「三年持续扩张」才该按节奏切成几段。
+_TIME_SHAPED = frozenset({"silence", "renaissance"})
+
+# 「时间型」章节按停顿的长度定义，不是按节奏定义。
+# 「隔了三年才回来」这种章节越长越说明问题，切它没有意义；
+# 「三年持续扩张」才该按节奏切成几段。
+_TIME_SHAPED = frozenset({"silence", "renaissance"})
+
+_MAX_CHAPTERS = 8          # 兜底上限，实际章数由跨度决定
+_MAX_CHAPTER_SHARE = 0.40  # 单章不超过总跨度的 40%
 _GAP_DAYS = 21            # 超过三周没提交，视为一次「沉默」
 _DEP_FILES = frozenset(
     {
@@ -123,7 +134,12 @@ def build_chapters(
     # 长历史先在粗粒度上找断点：一万多周里用 6 周滑窗，等于拿放大镜看地图，
     # 抓到的全是噪声。检测用粗粒度，渲染仍用原始 points。
     coarse, mapper = _coarsen(points)
-    max_breaks = min(_MAX_CHAPTERS - 1, max(1, len(coarse) // 8))
+    # 章数跟着历史的长度走：三个月的仓库切六章是硬凑，十年仓库切三章是偷懒。
+    horizon = (
+        date.fromisoformat(points[-1]["end"]) - date.fromisoformat(points[0]["start"])
+    ).days + 1
+    target = _target_chapters(horizon)
+    max_breaks = min(target - 1, max(1, len(coarse) // 8))
     raw_breaks = detect_breakpoints(coarse, max_breaks)
     breakpoints = [
         {"index": mapper[bp["index"]], "key": bp["key"], "date": bp["date"], "score": bp["score"]}
@@ -148,10 +164,26 @@ def build_chapters(
         if len(variety) > 1 or len(chapters) <= 3:
             break
 
+    # 还有一类章节：检测器在那一段里没找到突变（缓坡），于是一章跨了六年。
+    # 这不是检测失败 —— 那六年确实没有突变 —— 但读者拿不到任何信息。
+    # 按跨度比例强制切开，只在内部找最强的那一个断点。
+    # 切分要有预算：章数已经够了还硬切，会切出「扩张 / 打磨 / 扩张 / 打磨」
+    # 这种来回横跳的章节 —— 它比一个大章更难读。
+    # 但「一章吃掉 79% 历史」是另一种病，跟章数够不够无关，得单独给额度。
+    cap_days = horizon * _MAX_CHAPTER_SHARE
+    over_limit = sum(1 for seg in segments if _span(seg, points) > cap_days)
+    budget = max(over_limit, target - len(segments))
+    if budget:
+        segments = _split_long(
+            segments, points, horizon * _MAX_CHAPTER_SHARE, budget=budget
+        )
+    chapters = _build_chapters_from(segments, commits, points, lang, granularity, baseline)
+
     # 同一种画风连续超过两章，就把后两章并掉。
     # 「功能扩张期 Ⅲ」这种第 III 次重复，读者一眼就看出是模板在硬撑。
+    cap_days = horizon * _MAX_CHAPTER_SHARE
     for _ in range(_MAX_CHAPTERS):
-        run_start = _long_run(chapters)
+        run_start = _long_run(chapters, points, segments, cap_days)
         if run_start is None:
             break
         segments = (
@@ -161,18 +193,39 @@ def build_chapters(
         )
         chapters = _build_chapters_from(segments, commits, points, lang, granularity, baseline)
 
+    # 「扩张 → 打磨 → 扩张」这种交替**不合并**。实测合并会把结构一起抹平：
+    # fzf 从 5 章压成 3 章，两章各占 1700 天，读者反而什么都看不到。
+    # 交替是这类项目的真实节奏 —— 一轮大改之后修一阵，再改一轮。
+
     merged = _merge_tiny(chapters)
     _dedupe_titles(merged)
 
     return {"chapters": merged, "breakpoints": breakpoints, "flat": len(merged) <= 1}
 
 
-def _long_run(chapters: list[dict], limit: int = 2) -> int | None:
-    """返回第一处「同一原型连续超过 limit 章」的起始下标。"""
+def _long_run(
+    chapters: list[dict],
+    points: list[dict] | None = None,
+    segments: list[tuple[int, int]] | None = None,
+    cap_days: float | None = None,
+    limit: int = 2,
+) -> int | None:
+    """返回第一处「同一原型连续超过 limit 章」的起始下标。
+
+    合并会让章节变长。如果并完会突破跨度上限，这一处就跳过 ——
+    跨度是硬约束，宁可让「功能扩张期 Ⅱ Ⅲ」并排出现，
+    也不要留下一个吃掉 87% 历史的章节。
+    """
     for index in range(len(chapters) - limit):
         window = chapters[index : index + limit + 1]
-        if len({chapter["archetype"] for chapter in window}) == 1:
-            return index + 1
+        if len({chapter["archetype"] for chapter in window}) != 1:
+            continue
+        if points and segments and cap_days:
+            if window[0]["archetype"] not in _TIME_SHAPED:
+                merged = (segments[index + 1][0], segments[index + limit][1])
+                if _span(merged, points) > cap_days:
+                    continue
+        return index + 1
     return None
 
 
@@ -201,6 +254,74 @@ def _build_chapters_from(
         chapters.append(chapter)
         prev_end = date.fromisoformat(chapter["end"])
     return chapters
+
+
+def _span(segment: tuple[int, int], points: list[dict]) -> int:
+    left = date.fromisoformat(points[segment[0]]["start"])
+    right = date.fromisoformat(points[segment[1] - 1]["end"])
+    return (right - left).days + 1
+
+
+def _split_long(
+    segments: list[tuple[int, int]],
+    points: list[dict],
+    cap: int,
+    *,
+    budget: int = 99,
+    depth: int = 0,
+) -> list[tuple[int, int]]:
+    """把超过 cap 的段落按内部最强的断点切开。budget 是这一轮最多切几刀。"""
+    if depth >= 2 or budget <= 0:
+        return segments
+    # 先切最长的那一段，避免预算被小段落吃掉
+    order = sorted(
+        range(len(segments)), key=lambda i: -_span(segments[i], points)
+    )
+    out = list(segments)
+    for index in order:
+        start, end = out[index]
+        if _span((start, end), points) <= cap or end - start < _MIN_SEGMENT * 2:
+            continue
+        window = points[start:end]
+        breaks = detect_breakpoints(window, 1)
+        span = _span((start, end), points)
+        if breaks:
+            cut = start + breaks[0]["index"]
+        elif span > cap * 2:
+            # 内部一点突变都没有，但这一段已经是半部历史了。
+            # 按时间中点切：人造边界，但比「五年前面的所有事都叫同一章」诚实。
+            cut = start + (end - start) // 2
+        else:
+            continue
+        if cut <= start + _MIN_SEGMENT - 1 or cut >= end - _MIN_SEGMENT + 1:
+            continue
+        # 切开之后两侧必须真的不一样。匀速仓库在这里会被切出一堆假阶段 ——
+        # 长章节的代价是「信息少」，虚假阶段的代价是「信息错」，后者更贵。
+        # 但超限一倍以上的段落例外：它已经不是「一章」了，是半部历史。
+        if span <= cap * 2 and _similar(
+            _segment_signals(points, start, cut),
+            _segment_signals(points, cut, end),
+            0.35,
+        ):
+            continue
+        out[index : index + 1] = [(start, cut), (cut, end)]
+        budget -= 1
+        if budget <= 0:
+            break
+    return out
+
+
+def _target_chapters(horizon_days: int) -> int:
+    """目标章数。宁可少切，也不要为了凑数把一条直线剁成六段。"""
+    if horizon_days < 120:
+        return 1
+    if horizon_days < 400:
+        return 3
+    if horizon_days < 1100:
+        return 4
+    if horizon_days < 2200:
+        return 5
+    return 6
 
 
 def _repo_baseline(commits: list[Commit]) -> dict:
@@ -280,13 +401,28 @@ def _merge_homogeneous(
     baseline: dict,
     tolerance: float = 0.35,
 ) -> list[tuple[int, int]]:
-    """从最相似的一对开始合并，直到没有可合并的相邻段落。"""
+    """从最相似的一对开始合并，直到没有可合并的相邻段落。
+
+    合并有两条刹车，缺一条都会出问题：
+    - 画风要像（tolerance），否则「救火期」和「打磨期」会被混为一谈；
+    - 合并后不能太长（_MAX_CHAPTER_SHARE），否则一段缓坡会把两边一起吞掉，
+      最后留下「2017~2024，功能扩张期」这种没有信息量的章节。
+    """
     segments = list(segments)
+    if not points:
+        return segments
+    horizon = (date.fromisoformat(points[-1]["end"]) - date.fromisoformat(points[0]["start"])).days + 1
+    cap = horizon * _MAX_CHAPTER_SHARE
+
     while len(segments) > 1:
         signals = [_segment_signals(points, start, end) for start, end in segments]
         best_index, best_gap = -1, None
         for index in range(len(segments) - 1):
             if not _similar(signals[index], signals[index + 1], tolerance):
+                continue
+            left = date.fromisoformat(points[segments[index][0]]["start"])
+            right = date.fromisoformat(points[segments[index + 1][1] - 1]["end"])
+            if (right - left).days + 1 > cap:
                 continue
             gap = abs(signals[index]["per_week"] - signals[index + 1]["per_week"])
             if best_gap is None or gap < best_gap:
@@ -299,15 +435,31 @@ def _merge_homogeneous(
 
 
 def _dedupe_titles(chapters: list[dict]) -> None:
-    """同一个原型出现多次时加罗马数字后缀，否则目录里会连着两行「功能扩张期」。"""
+    """同名章节加时间后缀。
+
+    原来加罗马数字（「功能扩张期 Ⅱ Ⅲ Ⅳ」），但四连的 Ⅱ Ⅲ Ⅳ 只是告诉读者
+    「又重复了一次」，年份才说得清是哪一段。vite 的四个扩张期在 2021~2026，
+    写成「功能扩张期 · 2021」比「Ⅳ」有用得多。
+    """
     roman = ["", " Ⅱ", " Ⅲ", " Ⅳ", " Ⅴ", " Ⅵ", " Ⅶ"]
     seen: Counter[str] = Counter()
+    used: set[str] = set()
     for chapter in chapters:
         archetype = chapter["archetype"]
         seen[archetype] += 1
-        count = seen[archetype]
-        if count > 1:
-            chapter["title"] = chapter["title"] + roman[min(count - 1, len(roman) - 1)]
+        if seen[archetype] == 1:
+            used.add(chapter["title"])
+            continue
+        year = chapter["start"][:4]
+        candidate = f"{chapter['title']} · {year}"
+        if candidate in used:
+            candidate = f"{chapter['title']} · {chapter['start'][:7]}"
+        if candidate in used:
+            candidate = f"{chapter['title']} · {chapter['start'][:7]}"
+        if candidate in used:
+            candidate = chapter["title"] + roman[min(seen[archetype] - 1, len(roman) - 1)]
+        chapter["title"] = candidate
+        used.add(candidate)
 
 
 def _chapter_commits(commits: list[Commit], start: str, end: str) -> list[Commit]:
@@ -327,10 +479,17 @@ def _build_chapter(
 ) -> dict | None:
     if not chunk:
         return None
-    start, end = chunk[0]["start"], chunk[-1]["end"]
-    members = _chapter_commits(commits, start, end)
+    bucket_start, bucket_end = chunk[0]["start"], chunk[-1]["end"]
+    members = _chapter_commits(commits, bucket_start, bucket_end)
     if not members:
         return None
+
+    # 章节的起止用**真实提交日期**，不是时间桶的边界。
+    # 否则 `--since 2025-01-01` 会显示「本章从 2024-12-30 开始」——
+    # 那是那一周的周一，不是这个仓库的历史。
+    # 注意 members 是 git log 的原序（最新在前），必须显式取最值。
+    start = min(c.authored_at for c in members).date().isoformat()
+    end = max(c.authored_at for c in members).date().isoformat()
 
     insertions = sum(c.insertions for c in members)
     deletions = sum(c.deletions for c in members)
@@ -488,10 +647,13 @@ def _single_chapter(commits: list[Commit], points: list[dict], lang: str, granul
     insertions = sum(c.insertions for c in commits)
     deletions = sum(c.deletions for c in commits)
     names = chapter_archetypes(lang)
+    # 单章说明整段历史没有可切分的结构。刚起步的仓库叫「稳态迭代」是错的。
+    span_days = (date.fromisoformat(end) - date.fromisoformat(start)).days + 1
+    archetype = "genesis" if span_days <= 180 else "steady"
     return {
         "id": "ch01",
-        "archetype": "steady",
-        "title": names.get("steady", "steady"),
+        "archetype": archetype,
+        "title": names.get(archetype, archetype),
         "start": start,
         "end": end,
         "span_days": (date.fromisoformat(end) - date.fromisoformat(start)).days + 1,
@@ -529,7 +691,13 @@ def _merge_tiny(chapters: list[dict]) -> list[dict]:
         return chapters
     merged: list[dict] = []
     for chapter in chapters:
-        if merged and (chapter["commits"] == 0 or chapter["span_days"] < 3):
+        # 沉寂期的价值在它前面那段空档的长度，不在自己的跨度 ——
+        # 「隔了两年回来提交两次」不该被并进前一章。
+        tiny = (
+            chapter["commits"] == 0
+            or (chapter["span_days"] < 3 and chapter["archetype"] not in ("silence", "renaissance"))
+        )
+        if merged and tiny:
             prev = merged[-1]
             for field in ("commits", "insertions", "deletions"):
                 prev[field] += chapter[field]

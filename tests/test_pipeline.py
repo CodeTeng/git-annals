@@ -227,3 +227,61 @@ def test_author_html(report: dict) -> None:
     assert 'id="share-card"' in html
     assert "DEVELOPER PROFILE" in html
     assert data["persona"]["name"] in html
+
+
+def test_empty_repo_raises_classified_error(tmp_path: Path) -> None:
+    """空仓库：不抛原始 git 报错，而是带 code 的 GitError，好让 CLI 说人话。"""
+    from chronicle.gitio import runner
+
+    root = tmp_path / "empty"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+
+    with pytest.raises(runner.GitError) as excinfo:
+        analyze(Options(repo=str(root)))
+
+    assert getattr(excinfo.value, "code", None) == "empty_repo"
+
+
+def test_binary_only_repo_does_not_claim_first_line(tmp_path: Path) -> None:
+    """只有二进制文件时，「写下了第一行」是错的。"""
+    root = tmp_path / "bin"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+    (root / "blob.bin").write_bytes(bytes(range(256)) * 50)
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "chore: add binary")
+
+    report = analyze(Options(repo=str(root)))
+    origin = next(f for f in report["fun_facts"] if f["id"] == "origin")
+    assert "第一行" not in origin["detail"]
+    assert "没有文本改动" in origin["detail"]
+
+
+def test_empty_repo_raises_classified_error(tmp_path: Path) -> None:
+    """空仓库：不抛原始 git 报错，而是带 code 的 GitError，好让 CLI 说人话。"""
+    from chronicle.gitio import runner
+
+    root = tmp_path / "empty"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+
+    with pytest.raises(runner.GitError) as excinfo:
+        analyze(Options(repo=str(root)))
+
+    assert getattr(excinfo.value, "code", None) == "empty_repo"
+
+
+def test_binary_only_repo_does_not_claim_first_line(tmp_path: Path) -> None:
+    """只有二进制文件时，「写下了第一行」是错的。"""
+    root = tmp_path / "bin"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+    (root / "blob.bin").write_bytes(bytes(range(256)) * 50)
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "chore: add binary")
+
+    report = analyze(Options(repo=str(root)))
+    origin = next(f for f in report["fun_facts"] if f["id"] == "origin")
+    assert "第一行" not in origin["detail"]
+    assert "没有文本改动" in origin["detail"]

@@ -105,6 +105,28 @@ def build(commits: list[Commit], *, top_langs: int = 6) -> dict:
     items.sort(key=lambda r: -r["churn"])
     top = items[:top_langs]
 
+    # 截断之后必须补一个 Other，否则各语言占比加起来不到 100%，
+    # 读者会以为统计漏了东西 —— 确实漏了。
+    rest = items[top_langs:]
+    if rest:
+        rest_churn = sum(item["churn"] for item in rest)
+        rest_files = len({path for item in rest for path in files[item["lang"]]})
+        bucket = next((item for item in top if item["lang"] == "Other"), None)
+        if bucket is not None:
+            bucket["churn"] += rest_churn
+            bucket["files"] += rest_files
+            bucket["share"] = pct(bucket["churn"], total)
+        else:
+            top.append(
+                {
+                    "lang": "Other",
+                    "churn": rest_churn,
+                    "files": rest_files,
+                    "share": pct(rest_churn, total),
+                    "category": "other",
+                }
+            )
+
     keys = sorted(by_month)
     series = []
     for lang in [item["lang"] for item in top]:

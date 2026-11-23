@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from ..clean import normalize_author_key
+from ..clean import is_bot, normalize_author_key
 from ..models import Commit
 from ._util import pct
 
@@ -29,6 +29,8 @@ def build(commits: list[Commit]) -> dict:
             "span_days": 0,
             "active_days": 0,
             "authors": 0,
+            "bots": 0,
+            "bot_commits": 0,
             "avg_commits_per_active_day": 0.0,
             "first_commit_at": None,
             "last_commit_at": None,
@@ -45,6 +47,9 @@ def build(commits: list[Commit]) -> dict:
         files.update(change.path for change in commit.changes)
 
     author_keys = {normalize_author_key(c.author, c.email) for c in commits}
+    bot_keys = {
+        normalize_author_key(c.author, c.email) for c in commits if is_bot(c.author, c.email)
+    }
     author_counts = Counter(normalize_author_key(c.author, c.email) for c in commits)
     kinds = Counter(c.kind for c in commits)
     insertions = sum(c.insertions for c in commits)
@@ -71,7 +76,9 @@ def build(commits: list[Commit]) -> dict:
         "files_touched": len(files),
         "span_days": span_days,
         "active_days": len(active_days),
-        "authors": len(author_keys),
+        "authors": len(author_keys) - len(bot_keys),
+        "bots": len(bot_keys),
+        "bot_commits": sum(1 for c in commits if is_bot(c.author, c.email)),
         "avg_commits_per_active_day": round(len(commits) / max(1, len(active_days)), 2),
         "first_commit_at": first.isoformat(),
         "last_commit_at": last.isoformat(),

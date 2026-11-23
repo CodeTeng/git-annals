@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 
-from ..clean import normalize_author_key
+from ..clean import is_bot, normalize_author_key
 from ..models import Commit
 from ._util import pct, round2
 
@@ -35,13 +35,21 @@ def build(commits: list[Commit], *, top: int = 12) -> dict:
             "kinds": Counter(),
             "first": None,
             "last": None,
+            "bot": False,
         }
     )
+
+    bot_commits = 0
+    bot_keys: set[str] = set()
 
     for commit in commits:
         key = normalize_author_key(commit.author, commit.email)
         entry = stats[key]
         entry["names"][commit.author] += 1
+        if is_bot(commit.author, commit.email):
+            entry["bot"] = True
+            bot_commits += 1
+            bot_keys.add(key)
         entry["emails"][commit.email.lower()] += 1
         entry["commits"] += 1
         entry["insertions"] += commit.insertions
@@ -83,17 +91,21 @@ def build(commits: list[Commit], *, top: int = 12) -> dict:
                 "avg_commits_per_active_day": round2(
                     entry["commits"] / max(1, len(entry["days"]))
                 ),
+                "is_bot": bool(entry["bot"]),
             }
         )
 
     rows.sort(key=lambda r: (-r["commits"], -r["net"]))
-    top_rows = rows[:top]
+    # 榜单只列真人；机器人数量单独报，否则「谁在写」这一节会被 dependabot 占位
+    top_rows = [row for row in rows if not row["is_bot"]][:top]
 
     return {
         "rows": top_rows,
         "total_commits": total,
-        "count": len(rows),
-        "single_author": len(rows) == 1,
+        "count": len(rows) - len(bot_keys),
+        "bot_count": len(bot_keys),
+        "bot_commits": bot_commits,
+        "single_author": len(rows) - len(bot_keys) == 1,
         "concentration": round2(top_rows[0]["share"]) if top_rows else 0.0,
         "rest_commits": total - sum(r["commits"] for r in top_rows),
         "empty": False,

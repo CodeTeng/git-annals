@@ -213,11 +213,22 @@ def filter_noise(commits: Iterable[Commit], extra: Sequence[str] | None = None) 
     3. 剩下的是真正的代码改动。
     """
     kept: list[Commit] = []
+    # 同一个路径会出现几百次：vite 的 9951 条提交里有 4.4 万个文件改动，
+    # 但不同路径只有几千个。逐个跑 168 条 glob 是白烧 8 秒。
+    noise_cache: dict[str, bool] = {}
+
+    def _is_noise(path: str) -> bool:
+        cached = noise_cache.get(path)
+        if cached is None:
+            cached = is_noise(path, extra)
+            noise_cache[path] = cached
+        return cached
+
     for commit in commits:
         normal: list[FileChange] = []
         dropped: list[FileChange] = []
         for change in commit.changes:
-            if is_noise(change.path, extra):
+            if _is_noise(change.path):
                 continue
             if change.churn >= BULK_LINE_THRESHOLD:
                 dropped.append(change)
@@ -317,6 +328,30 @@ def classify(subject: str, *, is_merge: bool = False) -> str:
             if word in lowered:
                 return kind
     return "other"
+
+
+_BOT_NAMES = frozenset(
+    {
+        "dependabot", "renovate", "github-actions", "allcontributors", "imgbot",
+        "pre-commit-ci", "codecov", "sourcery-ai", "mergify", "greenkeeper",
+        "travis-ci", "coveralls", "cypress", "netlify", "vercel", "deepsource-io",
+    }
+)
+
+
+def is_bot(name: str, email: str) -> bool:
+    """机器人账号。
+
+    真实仓库里 dependabot / allcontributors 能占几百次提交，
+    把它们和真人并列在「谁在写」里，数字就是错的。
+    """
+    lowered_name = (name or "").strip().lower()
+    lowered_email = (email or "").strip().lower()
+    if "[bot]" in lowered_name or lowered_name.endswith(" bot") or lowered_name.endswith("-bot"):
+        return True
+    if "bot@" in lowered_email and lowered_email.split("@")[0].endswith("[bot]"):
+        return True
+    return lowered_name.split("[")[0] in _BOT_NAMES
 
 
 def normalize_author_key(name: str, email: str) -> str:

@@ -17,8 +17,31 @@ from pathlib import Path
 __all__ = ["GitError", "resolve_repo", "run", "stream", "repo_meta"]
 
 
+# git 的报错直接抛给用户没有意义 —— "your current branch 'main' does not have
+# any commits yet" 是给开发者看的，不是给用户看的。这里识别出已知情形，
+# 打上 code，由上层按语言给出人话。
+_KNOWN_ERRORS = (
+    ("does not have any commits yet", "empty_repo"),
+    ("does not have any commits", "empty_repo"),
+    ("bad revision", "bad_revision"),
+    ("not a git repository", "not_a_repo"),
+)
+
+
+def _classify(stderr: str) -> str | None:
+    lowered = stderr.lower()
+    for needle, code in _KNOWN_ERRORS:
+        if needle in lowered:
+            return code
+    return None
+
+
 class GitError(RuntimeError):
-    """Git 不可用、路径不是仓库、或命令返回非零。"""
+    """git 调用失败。`code` 用于把已知情形翻译成人话。"""
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 def _git_binary() -> str:
@@ -71,7 +94,7 @@ def run(
     out = proc.stdout.decode("utf-8", errors="replace")
     if check and proc.returncode != 0:
         err = proc.stderr.decode("utf-8", errors="replace").strip()
-        raise GitError(f"git {' '.join(args)} 失败：{err}")
+        raise GitError(f"git {' '.join(args)} 失败：{err}", code=_classify(err))
     return out, proc.returncode
 
 
@@ -96,7 +119,7 @@ def stream(repo: Path, args: list[str]) -> Iterator[str]:
         err = proc.stderr.read().decode("utf-8", errors="replace").strip()
         proc.stderr.close()
         if proc.wait() != 0:
-            raise GitError(f"git {' '.join(args)} 失败：{err}")
+            raise GitError(f"git {' '.join(args)} 失败：{err}", code=_classify(err))
 
 
 def repo_meta(repo: Path) -> dict[str, str | None]:

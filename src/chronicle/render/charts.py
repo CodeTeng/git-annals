@@ -324,7 +324,8 @@ def svg_share_card(report: dict, *, width: int = 720, height: int = 1080) -> str
         f'xmlns="http://www.w3.org/2000/svg" font-family="{_FONT}">',
         f'<title>{_e(t("chart.card.title", meta.get("lang", "zh")))}</title>',
         f'<rect width="{width}" height="{height}" fill="#16151A"/>',
-        f'<text x="{pad}" y="72" font-size="12.5" fill="#8C877E" letter-spacing="3">GIT CHRONICLE</text>',
+        f'<text x="{pad}" y="72" font-size="12.5" fill="#8C877E" letter-spacing="3">'
+        f'{_e(TOOL_NAME.upper().replace("-", " "))}</text>',
         f'<text x="{width - pad}" y="72" text-anchor="end" font-size="12.5" fill="#8C877E">'
         f"{_e(first)} — {_e(last)}</text>",
     ]

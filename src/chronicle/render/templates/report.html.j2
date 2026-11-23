@@ -143,7 +143,7 @@
                 aria-selected="{{ 'true' if loop.first else 'false' }}"
                 aria-controls="panel-{{ ch.id }}" data-target="panel-{{ ch.id }}">
           <span class="cn-title">{{ ch.title }}</span>
-          <span class="cn-range">{{ ch.start[2:10] }} — {{ ch.end[2:10] }}</span>
+          <span class="cn-range">{{ ch.start[:7] }} → {{ ch.end[:7] }}</span>
         </button>
         {% endfor %}
       </nav>

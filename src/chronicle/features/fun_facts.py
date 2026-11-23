@@ -55,10 +55,13 @@ def build_facts(
 
     # 原点
     first = ordered[0]
+    origin_key = (
+        "fact.origin.detail" if first.insertions or first.deletions else "fact.origin.detail.binary"
+    )
     add(
         "origin",
         t(
-            "fact.origin.detail",
+            origin_key,
             lang,
             date=first.authored_at.date().isoformat(),
             author=author_label or first.author,
