@@ -193,13 +193,20 @@ overrides={**({"lang": lang} if lang else {})}
 
 ## 八、复现方式
 
-```bash
-# 自动化测试（127 项）
-pytest tests -q
+**可复现的是自动化测试。** 83 项功能检查里发现的问题，结论都已固化成 `tests/`
+下的回归用例（bare 仓库、配置优先级、贡献者余量排除机器人、异常类一致性、
+3.10 的 toml 回落等），换台机器、换个 Python 版本都跑得起来：
 
-# 逐功能检查（83 项）
-python probe.py     # A-H 域，含 4 个真实仓库 + 7 个构造仓库
-python probe2.py    # I-M 域，CLI 开关 / 配置 / 降级 / 画像 / 统计细节
+```bash
+pytest tests -q          # 128 项，含按仓库形态生成的不变式测试
 ```
 
-两个 probe 脚本会输出 `[PASS]/[FAIL]` 逐项结果和 JSON 快照，可直接对比回归。
+当时的两份逐功能检查脚本 `probe.py` / `probe2.py` 属于**一次性验证工具，没有随仓库发布**：
+它们硬编码了本机绝对路径（源码目录、`.venv`、临时目录），并依赖当时临时克隆的
+5 个真实仓库（gin / type-fest / httpie / fzf / rustlings）。换台机器直接跑会失败，
+所以没有收进版本库。
+
+83 项检查的逐项结论与 `[PASS]/[FAIL]` 结果保留在本报告第二至六节；
+`probe-results.json` / `probe2-results.json` 快照只存在于当时的临时目录。
+要在新环境重做真实仓库验证，用 `--no-ai` 对任意本地仓库跑一遍，
+或参考 `tests/repo_shapes.py` 构造极端形态仓库 —— 这部分已经进自动化测试。

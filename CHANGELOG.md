@@ -2,6 +2,24 @@
 
 > 发布名从 `git-chronicle` 改为 **`gitannals`**：PyPI 上的 `git-chronicle` 已被另一个同类项目占用（其命令也叫 `chronicle`），为避免安装与命令冲突整体改名。仓库与 PyPI 项目现在同名：`CodeTeng/git-annals` / `gitannals`。
 
+## 0.1.7 — 2026-11-24
+
+改名收尾与文档校准，无功能变更。
+
+- **修一个用户可见的错**：`--view author` 的「占比偏低」警告里写的是
+  `.chronicle.toml`，但配置文件从改名起就是 `.annals.toml`。照着提示写配置
+  不会生效，而且没有任何报错。中英两版文案都已改正。
+- 新增 `test_i18n_uses_current_config_filename`：遍历全部词条，旧配置名出现即失败，
+  并断言合并提示指向 `config.CONFIG_FILENAME`。以后再改名，这条会先红。
+- `cli.py` / `identity.py` 文档字符串里的旧命令名 `chronicle` 改为 `gitannals`；
+  `identity.py` 顺带同步「项目视角只提示 / 个人视角自动合并」的当前口径。
+- `.gitignore` 补上改名后的默认产物 `annals-report.html` / `annals-author.html`
+  （原来只忽略旧名，跑一次命令就会多出两个未跟踪文件），并去掉重复的一段。
+- `docs/functional-test-report-2026-11-23.md` 第八节如实说明：`probe.py` / `probe2.py`
+  硬编码本机路径、依赖临时克隆的 5 个真实仓库，未随仓库发布；可复现的是 `tests/`。
+
+**测试**：127 → 128 项。这一版同时把 PyPI 页面上的测试数刷新到 128。
+
 ## 0.1.6 — 2026-11-23
 
 按功能点组织的完整测试（83 项功能检查 + 22 项补充检查 + 自动化测试），发现并修掉 5 个 bug。

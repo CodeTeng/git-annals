@@ -96,3 +96,21 @@ def test_weekday_labels_follow_language() -> None:
 
     assert weekdays("en")[0] == "Mon"
     assert weekdays("zh")[0] == "周一"
+
+
+def test_i18n_uses_current_config_filename() -> None:
+    """文案里的配置文件名必须和真正被读取的那个是同一个。
+
+    改名后 `.chronicle.toml` 曾在警告里活了六个版本：用户照着提示写配置，
+    工具却当它不存在。这类错误不会报错，只能靠一条钉死的断言拦住。
+    """
+    from chronicle.config import CONFIG_FILENAME
+    from chronicle.i18n import LANGS, t
+
+    for lang, texts in TEXT.items():
+        for key, value in texts.items():
+            assert ".chronicle.toml" not in value, f"{lang}.{key} 仍写着旧配置名"
+
+    for lang in LANGS:
+        warning = t("ui.warn.low_share", lang, share="10")
+        assert CONFIG_FILENAME in warning, f"{lang} 的合并提示没有指向当前配置文件"

@@ -1,7 +1,7 @@
 """命令行入口。
 
 一条命令跑完，中间不问问题。所有参数都有默认值。
-`chronicle .` 出项目编年史，`chronicle . --view author` 出个人画像。
+`gitannals .` 出项目编年史，`gitannals . --view author` 出个人画像。
 """
 
 from __future__ import annotations

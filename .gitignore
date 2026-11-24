@@ -12,16 +12,15 @@ build/
 
 # 生成的报告与中间态，不进版本库
 out/
+annals-report.html
+annals-author.html
+# 改名前的旧产物，工作区里可能还留着
 chronicle-report.html
 author-report.html
 *.local.toml
 
 .DS_Store
 Thumbs.db
-
-# 手工压测时克隆的外部仓库，不进版本库
-/bench/
-/vite/
 
 # 手工压测时克隆的外部仓库，不进版本库
 /bench/

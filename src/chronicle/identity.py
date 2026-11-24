@@ -3,15 +3,16 @@
 以邮箱为主键是最稳的默认，但现实里同一个人常有多个邮箱（公司 + 个人 + 学校），
 `--view author` 会把他的一生切成两半。这里提供显式合并：
 
-    chronicle . --view author --author "me@corp.com,me@gmail.com"
+    gitannals . --view author --author "me@corp.com,me@gmail.com"
 
-或者在仓库根的 `.chronicle.toml` 里写死：
+或者在仓库根的 `.annals.toml` 里写死：
 
     [author]
     [author.aliases]
     Ambition = ["teng2002823@outlook.com", "lt537674@antgroup.com"]
 
-不做自动猜：误合并两个人比漏合并一个人更伤，而且用户看得出后者。
+项目视角只提示、不替用户合并：误合并两个同名真人比漏合并更难发现。
+个人视角 (`--view author`) 会自动合并判定为同一人的身份 —— `--author` 指向的是人，不是邮箱。
 """
 
 from __future__ import annotations
