@@ -53,10 +53,7 @@ _NOISE_DIRS = (
     "third_party",
     "datasets",
     "dist",
-    "build",
     "target",
-    "out",
-    "output",
     "coverage",
     "htmlcov",
     "venv",
@@ -169,6 +166,11 @@ _NOISE_GLOBS = (
     "*.orc",
 )
 
+# 这些目录名既可能是构建产物，也可能是被 Git 跟踪的源码：
+# httpie 的 `httpie/output/`、vite 的 `src/node/build/` 都是正常源码。
+# 只有文件本身不是源码扩展名时，才把它当噪音 —— 真的产物通常根本不进版本库。
+_AMBIGUOUS_DIRS = frozenset({"build", "out", "output"})
+
 DEFAULT_IGNORE: tuple[str, ...] = _NOISE_DIRS + _NOISE_FILES + _NOISE_GLOBS
 
 _DIR_SET = frozenset(_NOISE_DIRS)
@@ -183,9 +185,16 @@ def is_noise(path: str, extra: Sequence[str] | None = None) -> bool:
     """
     segments = path.split("/")
     basename = segments[-1]
+    dirs = segments[:-1]
 
-    if any(seg in _DIR_SET for seg in segments[:-1]):
+    if any(seg in _DIR_SET for seg in dirs):
         return True
+    if any(seg in _AMBIGUOUS_DIRS for seg in dirs):
+        # _CODE_EXTS 定义在本模块后面；函数调用时模块早已加载完毕。
+        dot = basename.rfind(".")
+        suffix = basename[dot:].lower() if dot > 0 else ""
+        if suffix not in _CODE_EXTS:
+            return True
     if basename in _FILE_SET:
         return True
     if any(fnmatch.fnmatchcase(basename, pattern) for pattern in _GLOB_SET):
@@ -288,7 +297,7 @@ _KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
              "修复", "修", "错误", "异常", "崩溃", "补丁")),
     ("feat", ("feat", "feature", "add", "implement", "support", "introduce", "create",
               "new", "新增", "添加", "实现", "支持", "增加")),
-    ("chore", ("chore", "misc", "tweak", "update", "update", "调整", "杂项")),
+    ("chore", ("chore", "misc", "tweak", "update", "调整", "杂项")),
 )
 
 

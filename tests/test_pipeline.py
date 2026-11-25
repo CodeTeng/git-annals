@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 import subprocess
 from pathlib import Path
 
@@ -41,6 +41,63 @@ def test_noise_rules() -> None:
     assert is_noise("vendor/x.c")
     assert is_noise(".superpowers/x.md", extra=[".superpowers/"])
     assert not is_noise("src/main.py", extra=["node_modules"])
+    # output / build 既可能是产物，也常是被 Git 跟踪的源码目录。
+    # httpie 的 httpie/output/、vite 的 src/node/build/ 都曾被整段吃掉。
+    assert not is_noise("httpie/output/formatters/colors.py")
+    assert not is_noise("packages/vite/src/node/build/index.ts")
+    assert is_noise("out/report.html")
+    assert is_noise("build/artifacts/app.bin")
+
+
+def test_deepest_night_prefers_midnight() -> None:
+    """「最深的夜」要选更接近零点的那次，而不是 1 点。
+
+    旧实现用 (24 - hour) % 24，0 点得 0、1 点得 23，反而把 1 点排在前面。
+    """
+    from datetime import datetime
+
+    from chronicle.features.fun_facts import build_facts
+    from chronicle.models import Commit, FileChange
+
+    def make(sha: str, hour: int, minute: int) -> Commit:
+        moment = datetime(2026, 1, 1, hour, minute)
+        return Commit(
+            sha=sha,
+            parents=(),
+            author="Alice",
+            email="alice@example.com",
+            authored_at=moment,
+            committed_at=moment,
+            subject="feat: night work",
+            changes=[FileChange(path="src/a.py", insertions=1, deletions=0)],
+        )
+
+    facts = build_facts([make("a" * 8, 0, 15), make("b" * 8, 3, 40)])
+    deepest = next(fact for fact in facts if fact["id"] == "deepest_night")
+    assert deepest["value"] == "00:15", deepest
+
+
+def test_single_chapter_reports_real_weekly_rate(tmp_path: Path) -> None:
+    """单章仓库的「每周提交数」不能直接等于提交总数。
+
+    页面上的章节卡片就展示这个字段，短历史仓库曾经显示成 20 次/周。
+    """
+    root = tmp_path / "short"
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+    base = date(2026, 1, 1)
+    for index in range(8):
+        write(root, "app.py", "".join(f"line {j}\n" for j in range(index + 1)))
+        git(root, "add", ".")
+        when = f"{base + timedelta(days=index * 1.5)}T10:00:00+08:00"
+        git(root, "commit", "-q", "-m", f"feat: line {index}", when=when)
+
+    report = analyze(Options(repo=root))
+    assert len(report["chapters"]) == 1
+    only = report["chapters"][0]
+    expected = only["commits"] / max(1.0, only["weeks"])
+    assert abs(only["commits_per_week"] - expected) < 0.2, only["commits_per_week"]
+    assert only["commits_per_week"] != only["commits"]
 
 
 def test_classify() -> None:

@@ -73,7 +73,9 @@ def build_facts(
     # 最深的夜：取「最晚的凌晨」而不是「最早的钟点」，0:15 比 5:59 更像熬通宵
     night = [c for c in commits if c.authored_at.hour < 6]
     if night:
-        deepest = max(night, key=lambda c: (24 - c.authored_at.hour) % 24)
+        # 取一天里最早的那个凌晨时刻：00:15 比 05:59 更像熬通宵。
+        # 原来用 (24 - hour) % 24，0 点会算成 0、1 点算成 23，反而选中 1 点。
+        deepest = min(night, key=lambda c: c.authored_at.time())
         add(
             "deepest_night",
             t(
@@ -107,7 +109,7 @@ def build_facts(
                 start=best[0].isoformat(),
                 end=best[1].isoformat(),
             ),
-            f"{best[2]}d",
+            f"{best[2]}{t('unit.day', lang)}",
         )
 
     # 单条最大提交
@@ -122,7 +124,7 @@ def build_facts(
                 lines=_fmt_int(biggest.churn),
                 subject=_clip(biggest.subject, 48),
             ),
-            f"{_fmt_int(biggest.churn)} lines",
+            f"{_fmt_int(biggest.churn)} {t('unit.line', lang)}",
         )
 
     # 最疯狂的一天
@@ -161,7 +163,7 @@ def build_facts(
                     end=gap_end.isoformat(),
                     days=gap_days,
                 ),
-                f"{gap_days}d",
+                f"{gap_days}{t('unit.day', lang)}",
             )
 
     # 深夜在场者

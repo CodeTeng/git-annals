@@ -24,11 +24,6 @@ _MIN_SEGMENT = 3          # 每章至少 3 个时间桶
 # 「三年持续扩张」才该按节奏切成几段。
 _TIME_SHAPED = frozenset({"silence", "renaissance"})
 
-# 「时间型」章节按停顿的长度定义，不是按节奏定义。
-# 「隔了三年才回来」这种章节越长越说明问题，切它没有意义；
-# 「三年持续扩张」才该按节奏切成几段。
-_TIME_SHAPED = frozenset({"silence", "renaissance"})
-
 _MAX_CHAPTERS = 8          # 兜底上限，实际章数由跨度决定
 _MAX_CHAPTER_SHARE = 0.40  # 单章不超过总跨度的 40%
 _GAP_DAYS = 21            # 超过三周没提交，视为一次「沉默」
@@ -455,8 +450,6 @@ def _dedupe_titles(chapters: list[dict]) -> None:
         if candidate in used:
             candidate = f"{chapter['title']} · {chapter['start'][:7]}"
         if candidate in used:
-            candidate = f"{chapter['title']} · {chapter['start'][:7]}"
-        if candidate in used:
             candidate = chapter["title"] + roman[min(seen[archetype] - 1, len(roman) - 1)]
         chapter["title"] = candidate
         used.add(candidate)
@@ -649,6 +642,7 @@ def _single_chapter(commits: list[Commit], points: list[dict], lang: str, granul
     names = chapter_archetypes(lang)
     # 单章说明整段历史没有可切分的结构。刚起步的仓库叫「稳态迭代」是错的。
     span_days = (date.fromisoformat(end) - date.fromisoformat(start)).days + 1
+    weeks = max(1.0, span_days / 7)
     archetype = "genesis" if span_days <= 180 else "steady"
     return {
         "id": "ch01",
@@ -656,15 +650,15 @@ def _single_chapter(commits: list[Commit], points: list[dict], lang: str, granul
         "title": names.get(archetype, archetype),
         "start": start,
         "end": end,
-        "span_days": (date.fromisoformat(end) - date.fromisoformat(start)).days + 1,
-        "weeks": round2(max(1.0, (date.fromisoformat(end) - date.fromisoformat(start)).days / 7)),
+        "span_days": span_days,
+        "weeks": round2(weeks),
         "commits": len(commits),
         "insertions": insertions,
         "deletions": deletions,
         "net": insertions - deletions,
         "authors": len({c.email.lower() for c in commits}),
-        "commits_per_week": round2(len(commits)),
-        "fix_share": pct(sum(1 for c in commits if c.kind == "fix"), len(commits)),
+        "commits_per_week": round2(len(commits) / weeks),
+        "fix_share": pct(sum(1 for c in commits if c.kind in ("fix", "revert")), len(commits)),
         "delete_ratio": pct(deletions, insertions + deletions),
         "gap_before_days": 0,
         "top_dirs": _top_dirs(commits, limit=3, lang=lang),
@@ -756,7 +750,7 @@ def build_events(
     for commit in sorted(
         (c for c in commits if c.is_bulk), key=lambda c: -c.dropped_churn
     )[:2]:
-        push(commit, "bulk_import", f"{commit.dropped_churn:,} lines")
+        push(commit, "bulk_import", f"{commit.dropped_churn:,} {t('unit.line', lang)}")
 
     # 2. 依赖清单变更 —— 通常是技术栈转向的信号
     dep_commits = [
@@ -765,7 +759,7 @@ def build_events(
         if any(change.path.rsplit("/", 1)[-1] in _DEP_FILES for change in c.changes)
     ]
     for commit in sorted(dep_commits, key=lambda c: -c.churn)[:2]:
-        push(commit, "deps", f"{commit.churn} lines")
+        push(commit, "deps", f"{commit.churn} {t('unit.line', lang)}")
 
     # 3. 单条最大变更
     for commit in sorted(commits, key=lambda c: -c.churn)[:3]:

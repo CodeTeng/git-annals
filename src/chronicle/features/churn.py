@@ -7,7 +7,7 @@
   freq   变更频次（log 归一化，避免超大文件通吃）
   brittle 该文件的提交里 fix/revert 的占比（易碎度）
   silo   只有一个人碰过 = 知识孤岛，交接时最疼
-score = 0.45*freq + 0.30*brittle + 0.25*silo
+score = 0.50*freq + 0.30*brittle + 0.20*silo
 
 三个分项都保留在输出里，报告可以直接告诉用户「它为什么上榜」。
 """

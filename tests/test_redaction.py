@@ -129,6 +129,20 @@ def test_non_anon_keeps_real_data(secret_repo: Path) -> None:
     assert report["meta"].get("anon") is not True
 
 
+def test_anon_keeps_time_keys(secret_repo: Path) -> None:
+    """时间轴的 key 是 `2026-W14` 这类周编号，不能被当成邮箱替换掉。
+
+    `_walk` 曾把所有名为 key 的字段都交给 email() 处理，于是 --json 里的
+    timeline / breakpoints 全变成 dev-xxxx@redacted。
+    """
+    report = analyze(Options(repo=secret_repo, anon=True))
+    keys = [point["key"] for point in report["timeline"]["points"]]
+    assert keys, "时间轴不该为空"
+    assert all("@" not in key for key in keys), keys
+    for breakpoint in report["breakpoints"]:
+        assert "@" not in breakpoint["key"], breakpoint["key"]
+
+
 def test_branch_keeps_conventional_prefix(secret_repo: Path) -> None:
     report = analyze(Options(repo=secret_repo, anon=True))
     branch = report["meta"]["repo"]["branch"]

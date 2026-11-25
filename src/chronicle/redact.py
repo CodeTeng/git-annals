@@ -249,7 +249,9 @@ def _walk(node: Any, redactor: Redactor, key: str = "") -> Any:
     if key in _NAME_KEYS:
         return redactor.person(node)
     if key in _EMAIL_KEYS:
-        return redactor.email(node)
+        # 只有真的像邮箱才替换。`timeline.points[].key` 是 `2026-W48` 这类时间键，
+        # 被当成邮箱会变成 dev-xxxx@redacted，把 --json 的契约弄坏。
+        return redactor.email(node) if "@" in node else node
     return redactor.text(node)
 
 

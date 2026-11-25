@@ -2,6 +2,49 @@
 
 > 发布名从 `git-chronicle` 改为 **`gitannals`**：PyPI 上的 `git-chronicle` 已被另一个同类项目占用（其命令也叫 `chronicle`），为避免安装与命令冲突整体改名。仓库与 PyPI 项目现在同名：`CodeTeng/git-annals` / `gitannals`。
 
+## 0.1.8 — 2026-11-25
+
+一轮功能审计，修了 4 个会算错数字的 bug，外加若干重复代码与文案。
+
+**P1：噪音过滤吃掉源码目录**
+
+`build` / `out` / `output` 在任意层级命中就被整段丢弃。httpie 的
+`httpie/output/` 是正常源码包，23 个被跟踪的 `.py` 文件因此从未进入统计 ——
+代码量、语言构成、修罗场全都少算，而且报告数字自洽，肉眼看不出来。
+现在这三个目录名只在文件不是源码扩展名时才当噪音（真的产物通常根本不进版本库）。
+修复后 httpie 的 `commits_code` 从 1673 回到 1683，`commits_empty` 从 17 降到 7，
+总数不变。`test_noise_rules` 补了四个断言。
+
+**P2：脱敏把时间轴 key 当成邮箱**
+
+`_walk` 把所有名为 `key` 的字段交给 `email()`，于是 `--anon --json` 里的
+`timeline.points[].key`（`2026-W14`）和 `breakpoints[].key` 全变成
+`dev-xxxx@redacted`，把 Chronicle JSON 的契约弄坏。现在只有值里含 `@` 才替换。
+
+**P2：「最深的夜」选错**
+
+`(24 - hour) % 24` 让 0 点算成 0、1 点算成 23，彩蛋会挑 01:48 而不是 00:00，
+与注释「0:15 比 5:59 更像熬通宵」正好相反。改为按时刻取最早。
+
+**P2：单章仓库的「每周提交数」等于提交总数**
+
+`_single_chapter` 直接 `round2(len(commits))`，20 次提交跨 10 天的仓库
+在页面上显示「20 次/周」，实际是 14。改为 `len(commits) / weeks`，
+并把 `fix_share` 的口径与多章路径统一（`fix` + `revert`）。
+
+**代码卫生**
+
+- `overview.py` 的 `commits_empty` 整块写了两遍；`milestones.py` 的
+  `_TIME_SHAPED` 定义了两遍；`test_invariants.py` 末尾两个测试函数逐字重复
+  （同名覆盖，pytest 只收集一份）
+- `churn.py` 注释写权重 0.45/0.30/0.25，代码是 0.50/0.30/0.20，注释已对齐
+- 彩蛋与里程碑的 `lines` / `d` 单位写死英文，中文报告里会混英文；改用 i18n 词条
+
+**测试**：128 → 131 项（噪音误杀、匿名时间键、深夜彩蛋、单章周均）。
+**审计数据**：gin / httpie / fzf / rustlings 四个真实仓库（11,002 次提交）
+八项自洽性全过；误杀检查从 httpie 23 个降到 0。
+完整实测见 `docs/realworld-test-report-2026-11-25.md`（11 个仓库、40,894 次提交、308 项检查）。
+
 ## 0.1.7 — 2026-11-24
 
 改名收尾与文档校准，无功能变更。
